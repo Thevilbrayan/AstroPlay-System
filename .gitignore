@@ -1,24 +1,21 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Dependencias
+node_modules/
+package-lock.json
 
-node_modules
-dist
-dist-ssr
+# Compilación y temporales
+dist/
+dist-ssr/
 *.local
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Tauri y Rust (IMPORTANTE: esto pesa GBs)
+src-tauri/target/
+src-tauri/gen/
+
+# Secretos y Entorno
+.env
+.env.*
+
+# IDEs
+.vscode/
+.idea/
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
