@@ -1,50 +1,38 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { useAuthStore } from './store/auth.store';
+import { Login } from './components/Login';
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const { isValid, logout, user } = useAuthStore();
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+  // Si no está logueado, mostramos el Login.
+  if (!isValid) {
+    return <Login />;
   }
 
+  // Si ya entró, mostramos el Dashboard.
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+    <div className="min-h-screen bg-slate-900 p-10 text-white">
+      <header className="flex items-center justify-between border-b border-slate-700 pb-5">
+        <div>
+          <h1 className="text-3xl font-bold">Panel de Control</h1>
+          <p className="text-slate-400">Bienvenido de nuevo, {user?.name}</p>
+        </div>
+        <button 
+          onClick={logout}
+          className="rounded-lg bg-red-600/10 px-4 py-2 text-red-500 hover:bg-red-600/20 transition-colors"
+        >
+          Cerrar Sesión
+        </button>
+      </header>
+      
+      <main className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
+        {/* Aquí pondremos los botones de Check-in y Ventas después */}
+        <div className="rounded-xl bg-slate-800 p-6 border border-slate-700">
+          <h3 className="text-xl font-semibold">Estado del Sistema</h3>
+          <p className="mt-2 text-green-400">Conectado al VPS: 82.25.90.140</p>
+        </div>
+      </main>
+    </div>
   );
 }
 
