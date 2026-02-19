@@ -17,10 +17,13 @@
     "pocketbase": "^0.26.8",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-webcam": "^7.2.0",
     "tailwind-merge": "^3.4.1",
+    "tailwindcss-animate": "^1.0.7",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.2.0",
     "@tauri-apps/cli": "^2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",

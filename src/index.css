@@ -1,3 +1,10 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+@layer base {
+    body {
+        background-color: #020617;
+        /* Slate-950 sólido de fondo */
+        color: #f8fafc;
+    }
+}
