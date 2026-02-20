@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 interface DashboardProps {
-    onNavigate?: (view: 'dashboard' | 'checkin') => void;
+    onNavigate?: (view: 'dashboard' | 'checkin' | 'inventory') => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
@@ -160,7 +160,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                                 </div>
                             </button>
 
-                            <button className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-yellow-600/20 to-yellow-500/10 border border-yellow-500/30 hover:border-yellow-400 hover:from-yellow-600/30 transition-all group">
+                            <button
+                                onClick={() => onNavigate?.('inventory')}
+                                className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-yellow-600/20 to-yellow-500/10 border border-yellow-500/30 hover:border-yellow-400 hover:from-yellow-600/30 transition-all group"
+                            >
                                 <div className="bg-yellow-500 p-3 rounded-lg shadow-lg shadow-yellow-500/20 group-hover:scale-110 transition-transform">
                                     <ShoppingBag className="w-6 h-6 text-white" />
                                 </div>
