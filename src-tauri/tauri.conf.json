@@ -12,9 +12,15 @@
   "app": {
     "windows": [
       {
-        "title": "astroplay-system",
-        "width": 800,
-        "height": 600
+        "title": "AstroPlay OS",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "decorations": false,
+        "transparent": false,
+        "center": true,
+        "resizable": true
       }
     ],
     "security": {

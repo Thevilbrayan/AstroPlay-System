@@ -11,4 +11,6 @@ export interface Product {
     category: string;
     cost?: number;
     min_stock: number;
+    type?: 'physical' | 'service_fixed' | 'service_open';
+    is_for_sale?: boolean;
 }

@@ -3,7 +3,7 @@ import { useAuthStore } from './store/auth.store';
 import { Login } from './components/Login';
 import Dashboard from './components/Dashboard';
 import CheckInScreen from './components/CheckInScreen';
-import InventoryPOS from './components/InventoryPOS';
+import InventoryPOS from './components/inventory/InventoryPOS';
 import MainLayout from './components/layout/MainLayout';
 
 function App() {

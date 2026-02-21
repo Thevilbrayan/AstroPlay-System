@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Bell, Clock, User as UserIcon } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
+import { useUIStore } from '../../store/ui.store';
 
-const Header = () => {
+interface HeaderProps {
+    isCollapsed?: boolean;
+}
+
+const Header = ({ isCollapsed = false }: HeaderProps) => {
     const { user } = useAuthStore();
+    const { isFullscreen } = useUIStore();
     const [time, setTime] = useState(new Date());
 
     useEffect(() => {
@@ -12,7 +18,10 @@ const Header = () => {
     }, []);
 
     return (
-        <header className="fixed top-0 left-64 right-0 h-20 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/50 flex items-center justify-between px-8 z-40 transition-all duration-300">
+        <header
+            className={`fixed ${isFullscreen ? 'top-0' : 'top-9'} right-0 h-20 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/50 flex items-center justify-between px-8 z-40 transition-all duration-300`}
+            style={{ left: isCollapsed ? 64 : 256 }}
+        >
             {/* Left: Digital Clock */}
             <div className="flex items-center gap-3 text-slate-400">
                 <div className="p-2 bg-slate-900 rounded-lg border border-slate-800">

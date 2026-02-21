@@ -1,10 +1,50 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
 
+html,
+body,
+#root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
 @layer base {
     body {
         background-color: #020617;
         /* Slate-950 sólido de fondo */
         color: #f8fafc;
+    }
+
+    /* ── Custom Scrollbar ── */
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #334155;
+        /* slate-700 */
+        border-radius: 999px;
+        transition: background 0.2s;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #6d28d9;
+        /* violet-700 */
+    }
+
+    ::-webkit-scrollbar-corner {
+        background: transparent;
+    }
+
+    /* Firefox */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: #334155 transparent;
     }
 }
