@@ -9,7 +9,11 @@ import ProductFormModal from './ProductFormModal';
 
 type TabKey = 'pos' | 'inventory';
 
-const InventoryPOS: React.FC = () => {
+interface InventoryPOSProps {
+    onNavigate?: (view: string) => void;
+}
+
+const InventoryPOS: React.FC<InventoryPOSProps> = ({ onNavigate }) => {
     const { user } = useAuthStore();
     const [products, setProducts] = useState<Product[]>([]);
     const [activeTab, setActiveTab] = useState<TabKey>('pos');
@@ -19,8 +23,6 @@ const InventoryPOS: React.FC = () => {
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
     const isAdmin = user?.role === 'admin';
-    const categories = ['Snacks', 'Drinks', 'Socks'];
-    const allCategories = ['All', ...categories];
 
     // Load products
     const loadProducts = useCallback(async () => {
@@ -58,11 +60,11 @@ const InventoryPOS: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    // Quick stock adjust directly on the table
     const handleQuickStockAdjust = async (productId: string, delta: number) => {
         const product = products.find(p => p.id === productId);
         if (!product) return;
-        const newStock = Math.max(0, product.stock + delta);
+        const currentStock = product.stock || 0;
+        const newStock = Math.max(0, currentStock + delta);
         try {
             await pb.collection('products').update(productId, { stock: newStock });
             setProducts(prev => prev.map(p => p.id === productId ? { ...p, stock: newStock } : p));
@@ -112,21 +114,19 @@ const InventoryPOS: React.FC = () => {
                 </div>
             )}
 
-            {/* View Content */}
             <div className="flex-1 overflow-hidden p-6 pt-2">
                 {activeTab === 'pos' && (
                     <POSView
                         products={products}
-                        categories={allCategories}
                         formatCurrency={formatCurrency}
                         onSaleComplete={loadProducts}
+                        onNavigate={onNavigate}
                     />
                 )}
 
                 {activeTab === 'inventory' && isAdmin && (
                     <InventoryManagement
                         products={products}
-                        categories={categories}
                         formatCurrency={formatCurrency}
                         onEditProduct={handleEditProduct}
                         onQuickStockAdjust={handleQuickStockAdjust}
@@ -140,7 +140,6 @@ const InventoryPOS: React.FC = () => {
                 onClose={() => setIsModalOpen(false)}
                 editingProduct={editingProduct}
                 onSaved={loadProducts}
-                categories={categories}
             />
         </div>
     );

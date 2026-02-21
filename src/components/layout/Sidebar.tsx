@@ -1,7 +1,14 @@
-
 import React, { useState } from 'react';
-import { Rocket, LayoutDashboard, UserPlus, ShieldCheck, Box, Settings, LogOut } from 'lucide-react';
+import {
+    LayoutDashboard,
+    Users,
+    ShoppingCart,
+    Settings,
+    LogOut,
+    Monitor
+} from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
+import { useWorkstationStore } from '../../store/workstation.store';
 import { cn } from '../../lib/utils';
 import { useUIStore } from '../../store/ui.store';
 
@@ -12,17 +19,20 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView = 'dashboard', onNavigate, onCollapsedChange }) => {
-    const { logout } = useAuthStore();
     const [isCollapsed, setIsCollapsed] = useState(true);
+    const { user, logout } = useAuthStore();
+    const { workstationType } = useWorkstationStore();
     const { isFullscreen } = useUIStore();
 
     const menuItems = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'checkin', label: 'Check-in', icon: UserPlus },
-        { id: 'security', label: 'Seguridad', icon: ShieldCheck },
-        { id: 'inventory', label: 'Inventario', icon: Box },
-        { id: 'settings', label: 'Configuración', icon: Settings },
-    ];
+        { id: 'checkin', label: 'Check-in', icon: Users },
+        { id: 'inventory', label: 'Inventario', icon: ShoppingCart },
+    ].filter(item => {
+        if (workstationType === 'SNACK_ONLY') return item.id === 'inventory';
+        if (workstationType === 'TIME_ONLY') return item.id === 'dashboard' || item.id === 'checkin';
+        return true; // FULL_SERVICE
+    });
 
     const handleMouseEnter = () => {
         setIsCollapsed(false);
@@ -45,7 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView = 'dashboard', onNavigate
         >
             {/* Logo */}
             <div className="h-20 flex items-center px-4 border-b border-white/5 overflow-hidden">
-                <Rocket className="w-6 h-6 text-blue-500 flex-shrink-0" />
+                <img src="/logo.png" alt="Astroplay OS Logo" className="w-6 h-6 flex-shrink-0" />
                 <span
                     className={cn(
                         'ml-3 text-lg font-bold text-white tracking-tight whitespace-nowrap transition-all duration-200',
@@ -84,12 +94,71 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView = 'dashboard', onNavigate
                         </button>
                     );
                 })}
+
+                {/* Admin Settings Button */}
+                {user?.role === 'admin' && (
+                    <button
+                        onClick={() => onNavigate?.('settings')}
+                        className={cn(
+                            "flex items-center w-full px-3 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden",
+                            currentView === 'settings'
+                                ? "bg-gradient-to-r from-blue-600/20 to-transparent text-blue-400 ring-1 ring-blue-500/50"
+                                : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                        )}
+                        title={isCollapsed ? "Configuración" : undefined}
+                    >
+                        <Settings className={cn(
+                            "w-6 h-6 shrink-0 transition-transform duration-300",
+                            currentView === 'settings' ? "text-blue-400 scale-110" : "group-hover:text-blue-400 group-hover:scale-110"
+                        )} />
+
+                        <span
+                            className={cn(
+                                "font-medium whitespace-nowrap ml-4 transition-all duration-300",
+                                isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
+                            )}
+                        >
+                            Configuración
+                        </span>
+                    </button>
+                )}
+
+                {/* Admin Station Manager Button */}
+                {user?.role === 'admin' && (
+                    <button
+                        onClick={() => onNavigate?.('stations')}
+                        className={cn(
+                            "flex items-center w-full px-3 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden",
+                            currentView === 'stations'
+                                ? "bg-gradient-to-r from-blue-600/20 to-transparent text-blue-400 ring-1 ring-blue-500/50"
+                                : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                        )}
+                        title={isCollapsed ? "Gestión de Estaciones" : undefined}
+                    >
+                        <Monitor className={cn(
+                            "w-6 h-6 shrink-0 transition-transform duration-300",
+                            currentView === 'stations' ? "text-blue-400 scale-110" : "group-hover:text-blue-400 group-hover:scale-110"
+                        )} />
+
+                        <span
+                            className={cn(
+                                "font-medium whitespace-nowrap ml-4 transition-all duration-300",
+                                isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
+                            )}
+                        >
+                            Gestión de Estaciones
+                        </span>
+                    </button>
+                )}
             </nav>
 
             {/* Footer / Logout */}
             <div className="p-2 border-t border-white/5">
                 <button
-                    onClick={logout}
+                    onClick={() => {
+                        // Firmly decouple Logout from Workstation: Clear the Auth token, keeping lock screen!
+                        logout();
+                    }}
                     title={isCollapsed ? 'Cerrar Sesión' : undefined}
                     className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all border border-transparent hover:border-red-500/20"
                 >

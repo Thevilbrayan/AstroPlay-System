@@ -11,9 +11,43 @@ body,
 
 @layer base {
     body {
-        background-color: #020617;
-        /* Slate-950 sólido de fondo */
-        color: #f8fafc;
+        background-color: var(--color-slate-950);
+        color: var(--color-slate-200);
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* Light Theme Palette Overrides */
+    .light-theme {
+        --color-slate-950: #f1f5f9;
+        /* Base background -> light slate 50/100 */
+        --color-slate-900: #ffffff;
+        /* Card background -> white */
+        --color-slate-800: #e2e8f0;
+        /* Inputs / nested cards */
+        --color-slate-700: #cbd5e1;
+        /* Borders hover */
+        --color-slate-600: #94a3b8;
+        /* Muted icons */
+        --color-slate-500: #64748b;
+        /* Secondary text */
+        --color-slate-400: #475569;
+        /* Primary text inverted */
+        --color-slate-300: #334155;
+        /* Bold text inverted */
+        --color-slate-200: #1e293b;
+        /* Text normal */
+        --color-slate-100: #0f172a;
+        /* Text bold */
+
+        /* MAGIC FIX: Overriding absolute white to absolute dark slate. */
+        /* This makes `text-white` become `text-slate-950` in light mode. */
+        /* And `border-white/5` becomes `border-slate-950/5` (subtle dark border). */
+        --color-white: #020617;
+
+        /* Overriding absolute black for contrast if used */
+        --color-black: #ffffff;
+
+        /* But we must keep primary brand colors intact. Blue and Emerald stay the same. */
     }
 
     /* ── Custom Scrollbar ── */

@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { pb } from '../lib/pocketbase';
 import { useAuthStore } from '../store/auth.store';
-import { LogIn, Lock, Mail, Eye, EyeOff, Loader2, Sparkles, Rocket } from 'lucide-react';
+import { useWorkstationStore } from '../store/workstation.store';
+import { LogIn, Lock, Mail, Eye, EyeOff, Loader2, Sparkles, Rocket, Monitor } from 'lucide-react';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
@@ -11,6 +12,7 @@ export const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(''); // Add error state for better UI feedback
   const setAuth = useAuthStore((state) => state.setAuth);
+  const { workstationName } = useWorkstationStore();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,13 +50,23 @@ export const Login = () => {
             <div className="inline-flex items-center justify-center p-3 mb-4 rounded-full bg-blue-500/10 ring-1 ring-blue-400/30 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
               <Rocket className="w-8 h-8 text-blue-400" />
             </div>
-            <h1 className="text-3xl font-bold text-white tracking-tight mb-1">
+            <h1 className="text-3xl font-bold text-slate-100 tracking-tight mb-1">
               AstroPlay <span className="text-blue-400">OS</span>
             </h1>
-            <p className="text-sm text-slate-400 font-medium tracking-wide uppercase">Sistema Operativo de Gestión</p>
+            <p className="text-sm text-slate-400 font-medium tracking-wide uppercase mb-4">Sistema Operativo de Gestión</p>
+
+            {/* Lock Screen Workstation Context Info */}
+            {workstationName && (
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-800/80 rounded-full border border-slate-700/50">
+                <Monitor className="w-4 h-4 text-emerald-400" />
+                <span className="text-xs font-semibold text-slate-300">
+                  Estación: <span className="text-emerald-400">{workstationName}</span>
+                </span>
+              </div>
+            )}
           </div>
 
-          <div className="p-8 pt-6">
+          <div className="p-8 pt-4">
             <form onSubmit={handleLogin} className="space-y-6">
 
               {/* Error Message */}

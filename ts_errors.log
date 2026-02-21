@@ -1,0 +1,13 @@
+src/components/inventory/InventoryManagement.tsx(28,91): error TS18048: 'p.stock' is possibly 'undefined'.
+src/components/inventory/InventoryManagement.tsx(29,60): error TS18048: 'p.stock' is possibly 'undefined'.
+src/components/inventory/InventoryManagement.tsx(29,90): error TS18048: 'p.stock' is possibly 'undefined'.
+src/components/inventory/InventoryManagement.tsx(36,73): error TS2339: Property 'category' does not exist on type 'Product'.
+src/components/inventory/InventoryManagement.tsx(71,34): error TS18048: 'product.stock' is possibly 'undefined'.
+src/components/inventory/InventoryManagement.tsx(205,91): error TS2339: Property 'category' does not exist on type 'Product'.
+src/components/inventory/InventoryManagement.tsx(238,67): error TS18048: 'product.stock' is possibly 'undefined'.
+src/components/inventory/InventoryPOS.tsx(65,38): error TS18048: 'product.stock' is possibly 'undefined'.
+src/components/inventory/InventoryPOS.tsx(120,25): error TS2322: Type '{ products: Product[]; categories: string[]; formatCurrency: (amount: number) => string; onSaleComplete: () => Promise<void>; }' is not assignable to type 'IntrinsicAttributes & POSViewProps'.
+  Property 'categories' does not exist on type 'IntrinsicAttributes & POSViewProps'.
+src/components/inventory/InventoryPOS.tsx(143,17): error TS2322: Type '{ isOpen: boolean; onClose: () => void; editingProduct: Product | null; onSaved: () => Promise<void>; categories: string[]; }' is not assignable to type 'IntrinsicAttributes & ProductFormModalProps'.
+  Property 'categories' does not exist on type 'IntrinsicAttributes & ProductFormModalProps'.
+src/components/SecurityCheckIn.tsx(18,7): error TS6133: 'RELS' is declared but its value is never read.

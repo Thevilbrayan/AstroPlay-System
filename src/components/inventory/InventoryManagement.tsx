@@ -5,7 +5,6 @@ import Input from '../ui/Input';
 
 interface InventoryManagementProps {
     products: Product[];
-    categories: string[];
     formatCurrency: (amount: number) => string;
     onEditProduct: (product: Product) => void;
     onQuickStockAdjust: (productId: string, delta: number) => void;
@@ -13,33 +12,30 @@ interface InventoryManagementProps {
 
 const InventoryManagement: React.FC<InventoryManagementProps> = ({
     products,
-    categories,
     formatCurrency,
     onEditProduct,
     onQuickStockAdjust,
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterCategory, setFilterCategory] = useState('All');
     const [filterType, setFilterType] = useState<'all' | 'physical' | 'service'>('all');
 
     // Computed metrics
     const metrics = useMemo(() => {
         const physicalProducts = products.filter(p => p.type === 'physical' || !p.type);
-        const inventoryValue = physicalProducts.reduce((sum, p) => sum + ((p.cost || 0) * p.stock), 0);
-        const lowStockCount = physicalProducts.filter(p => p.stock > 0 && p.min_stock && p.stock <= p.min_stock).length;
+        const inventoryValue = physicalProducts.reduce((sum, p) => sum + ((p.cost || 0) * (p.stock || 0)), 0);
+        const lowStockCount = physicalProducts.filter(p => (p.stock || 0) > 0 && p.min_stock && (p.stock || 0) <= p.min_stock).length;
         return { inventoryValue, lowStockCount };
     }, [products]);
 
     const filteredProducts = useMemo(() => {
         return products.filter(product => {
             const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesCategory = filterCategory === 'All' || product.category === filterCategory;
             let matchesType = true;
             if (filterType === 'physical') matchesType = product.type === 'physical' || !product.type;
             else if (filterType === 'service') matchesType = product.type === 'service_fixed' || product.type === 'service_open';
-            return matchesSearch && matchesCategory && matchesType;
+            return matchesSearch && matchesType;
         });
-    }, [products, searchQuery, filterCategory, filterType]);
+    }, [products, searchQuery, filterType]);
 
     const getTypeLabel = (type?: string) => {
         switch (type) {
@@ -67,8 +63,9 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({
 
     const getStockHealthClass = (product: Product) => {
         if (product.type && product.type !== 'physical') return 'text-slate-600';
-        if (product.stock === 0) return 'text-red-400 font-bold';
-        if (product.min_stock && product.stock <= product.min_stock) return 'text-orange-400 font-bold';
+        const s = product.stock || 0;
+        if (s === 0) return 'text-red-400 font-bold';
+        if (product.min_stock && s <= product.min_stock) return 'text-orange-400 font-bold';
         return 'text-green-400';
     };
 
@@ -143,17 +140,6 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({
                         </button>
                     ))}
                 </div>
-
-                <select
-                    value={filterCategory}
-                    onChange={e => setFilterCategory(e.target.value)}
-                    className="bg-slate-900/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                >
-                    <option value="All">Todas las categorías</option>
-                    {categories.map(c => (
-                        <option key={c} value={c}>{c}</option>
-                    ))}
-                </select>
             </div>
 
             {/* Data Table */}
@@ -164,7 +150,6 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({
                             <tr className="bg-slate-900/90 backdrop-blur-md border-b border-white/5">
                                 <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Producto</th>
                                 <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tipo</th>
-                                <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Categoría</th>
                                 <th className="text-right py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Costo</th>
                                 <th className="text-right py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Precio</th>
                                 <th className="text-right py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Margen</th>
@@ -201,9 +186,6 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({
                                                 {getTypeLabel(product.type)}
                                             </span>
                                         </td>
-                                        {/* Category */}
-                                        <td className="py-3 px-3 text-slate-400">{product.category}</td>
-                                        {/* Cost */}
                                         <td className="py-3 px-3 text-right text-slate-400 font-mono text-xs">
                                             {product.cost ? formatCurrency(product.cost) : '—'}
                                         </td>
@@ -235,13 +217,13 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({
                                                 <div className="flex items-center justify-center gap-1">
                                                     <button
                                                         onClick={() => onQuickStockAdjust(product.id, -1)}
-                                                        disabled={product.stock <= 0}
+                                                        disabled={(product.stock || 0) <= 0}
                                                         className="p-1 rounded hover:bg-white/5 text-slate-500 hover:text-white transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-0"
                                                     >
                                                         <Minus className="w-3 h-3" />
                                                     </button>
                                                     <span className={`font-mono text-sm min-w-[28px] text-center ${getStockHealthClass(product)}`}>
-                                                        {product.stock}
+                                                        {product.stock || 0}
                                                     </span>
                                                     <button
                                                         onClick={() => onQuickStockAdjust(product.id, 1)}

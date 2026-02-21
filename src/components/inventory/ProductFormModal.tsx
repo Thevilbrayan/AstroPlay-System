@@ -11,17 +11,15 @@ interface ProductFormModalProps {
     onClose: () => void;
     editingProduct: Product | null;
     onSaved: () => void;
-    categories: string[];
 }
 
-const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, editingProduct, onSaved, categories }) => {
+const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, editingProduct, onSaved }) => {
     const [type, setType] = useState<'physical' | 'service_fixed' | 'service_open'>('physical');
     const [name, setName] = useState('');
     const [price, setPrice] = useState('0');
     const [stock, setStock] = useState('0');
     const [minStock, setMinStock] = useState('5');
     const [cost, setCost] = useState('');
-    const [category, setCategory] = useState(categories[0] || 'Snacks');
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState('');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -33,11 +31,10 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, ed
                 setType(editingProduct.type || 'physical');
                 setName(editingProduct.name);
                 setPrice(editingProduct.price.toString());
-                setStock(editingProduct.stock.toString());
+                setStock(editingProduct.stock?.toString() || '0');
                 setMinStock(editingProduct.min_stock?.toString() || '5');
                 setCost(editingProduct.cost?.toString() || '');
-                setCategory(editingProduct.category);
-                setPreviewUrl(editingProduct.imagen);
+                setPreviewUrl(editingProduct.imagen || '');
                 setImageFile(null);
             } else {
                 handleClearForm();
@@ -53,7 +50,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, ed
         setStock('0');
         setMinStock('5');
         setCost('');
-        setCategory(categories[0] || 'Snacks');
         setImageFile(null);
         setPreviewUrl('');
         setErrorMessage(null);
@@ -77,7 +73,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, ed
             formData.append('price', price);
             formData.append('stock', type === 'physical' ? stock : '0');
             formData.append('min_stock', type === 'physical' ? (minStock || '0') : '0');
-            formData.append('category', category);
+            if (type) formData.append('type', type);
 
             if (cost) formData.append('cost', cost);
             if (imageFile) formData.append('imagen', imageFile);
@@ -206,19 +202,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, ed
                                     />
                                 </div>
                             )}
-
-                            <div>
-                                <label className="block text-xs font-medium text-slate-400 mb-1">Categoría</label>
-                                <select
-                                    value={category}
-                                    onChange={e => setCategory(e.target.value)}
-                                    className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                                >
-                                    {categories.map(c => (
-                                        <option key={c} value={c}>{c}</option>
-                                    ))}
-                                </select>
-                            </div>
                         </div>
 
                         {/* Image Upload */}
@@ -284,7 +267,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, ed
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

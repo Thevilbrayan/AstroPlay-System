@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Bell, Clock, User as UserIcon } from 'lucide-react';
+import { Bell, Clock, User as UserIcon, Sun, Moon } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
 import { useUIStore } from '../../store/ui.store';
+import { useThemeStore } from '../../store/theme.store';
 
 interface HeaderProps {
     isCollapsed?: boolean;
@@ -10,6 +11,7 @@ interface HeaderProps {
 const Header = ({ isCollapsed = false }: HeaderProps) => {
     const { user } = useAuthStore();
     const { isFullscreen } = useUIStore();
+    const { theme, toggleTheme } = useThemeStore();
     const [time, setTime] = useState(new Date());
 
     useEffect(() => {
@@ -34,8 +36,17 @@ const Header = ({ isCollapsed = false }: HeaderProps) => {
                 </div>
             </div>
 
-            {/* Right: Notifications & Profile */}
+            {/* Right: Notifications, Theme & Profile */}
             <div className="flex items-center gap-6">
+
+                {/* Theme Toggle */}
+                <button
+                    onClick={toggleTheme}
+                    className="p-2 text-slate-400 hover:text-cyan-400 bg-slate-900/50 hover:bg-slate-800 rounded-lg border border-white/5 transition-all"
+                    title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+                >
+                    {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </button>
 
                 {/* Notifications */}
                 <button className="relative p-2 text-slate-400 hover:text-white transition-colors group">
