@@ -1,16 +1,16 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+
 import Webcam from 'react-webcam';
 import {
     Search, Camera, User, Phone, Users, AlertCircle, Plus,
-    CheckCircle2, Shield, ScanFace, Trash2, UserCheck, Check
+    CheckCircle2, Shield, ScanFace, Trash2, UserCheck, Check,
+    UserPlus, CreditCard, ChevronLeft, Activity
 } from 'lucide-react';
 import { Parent, Child } from '../types';
-import { pb } from '../lib/pocketbase';
 import { useSessionStore } from '../store/session.store';
+import { pb } from '../lib/pocketbase';
 import Button from './ui/Button';
 import DatePicker from './ui/DatePicker';
-
 /* ─── helpers ─── */
 interface ChildEntry { id: string; name: string; birth_date: string; allergies: string; }
 
@@ -29,23 +29,22 @@ function b64toFile(b64: string, name: string): File {
     return new File([u8], name, { type: mime });
 }
 
-const fmtDate = (iso: string) => { if (!iso) return ''; const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; };
+
 
 /* ─── component ─── */
-interface Props { onNavigate?: (view: 'dashboard' | 'checkin' | 'inventory') => void; }
+interface Props { onNavigate?: (view: 'dashboard' | 'checkin' | 'pos' | 'inventory') => void; }
 
 const SecurityCheckIn: React.FC<Props> = ({ onNavigate }) => {
     const { setSession } = useSessionStore();
 
     /* search */
-    const [sq, setSq] = useState('');
     const [searching, setSearching] = useState(false);
     const [results, setResults] = useState<Parent[]>([]);
     const [showDrop, setShowDrop] = useState(false);
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const boxRef = useRef<HTMLDivElement>(null);
     const ddRef = useRef<HTMLDivElement>(null);
-    const [ddPos, setDdPos] = useState({ top: 0, left: 0, width: 0 });
+
 
     /* parent */
     const [selParent, setSelParent] = useState<Parent | null>(null);
@@ -62,15 +61,35 @@ const SecurityCheckIn: React.FC<Props> = ({ onNavigate }) => {
     /* existing children (for selection) */
     const [existingKids, setExistingKids] = useState<Child[]>([]);
     const [selectedKidIds, setSelectedKidIds] = useState<Set<string>>(new Set());
+    const [showNewChildForm, setShowNewChildForm] = useState(false);
 
     /* new children */
     const [newChildren, setNewChildren] = useState<ChildEntry[]>([mkChild()]);
+
+    /* redesign Step 1 */
+    const [showNewParentForm, setShowNewParentForm] = useState(false);
+    const [recentParents, setRecentParents] = useState<Parent[]>([]);
+    const [activeKidsCount, setActiveKidsCount] = useState<number>(0);
+
+    /* data fetch */
+    useEffect(() => {
+        pb.collection('parents').getList(1, 3, { sort: '-created' })
+            .then(r => setRecentParents(r.items as unknown as Parent[]))
+            .catch(() => { });
+
+        pb.collection('sessions').getFullList({ filter: 'status="active"' })
+            .then(sessions => {
+                let count = 0;
+                sessions.forEach(s => count += (s.child?.length || 0));
+                setActiveKidsCount(count);
+            })
+            .catch(() => { });
+    }, []);
 
     /* submit */
     const [submitting, setSubmitting] = useState(false);
     const [success, setSuccess] = useState<string | null>(null);
 
-    /* ── search ── */
     const doSearch = useCallback(async (q: string) => {
         if (q.trim().length < 2) { setResults([]); setShowDrop(false); return; }
         setSearching(true);
@@ -81,21 +100,7 @@ const SecurityCheckIn: React.FC<Props> = ({ onNavigate }) => {
         } catch { /* ignore */ } finally { setSearching(false); }
     }, []);
 
-    const onSearchInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const v = e.target.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s]/g, '');
-        setSq(v);
-        if (selParent) { setSelParent(null); setExistingUrl(null); setExistingKids([]); setSelectedKidIds(new Set()); }
-        if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => doSearch(v), 350);
-    };
 
-    const updDdPos = useCallback(() => {
-        if (!boxRef.current) return;
-        const r = boxRef.current.getBoundingClientRect();
-        setDdPos({ top: r.bottom + 4, left: r.left, width: r.width });
-    }, []);
-
-    useEffect(() => { if (showDrop) updDdPos(); }, [showDrop, updDdPos]);
     useEffect(() => {
         if (!showDrop) return;
         const h = (e: MouseEvent) => {
@@ -112,7 +117,6 @@ const SecurityCheckIn: React.FC<Props> = ({ onNavigate }) => {
     const pickParent = async (p: Parent) => {
         setSelParent(p);
         setShowDrop(false);
-        setSq('');
         setPName(p.name);
         setPPhone(p.phone || '');
         setPEmail(p.email || '');
@@ -133,9 +137,64 @@ const SecurityCheckIn: React.FC<Props> = ({ onNavigate }) => {
         setNewChildren([mkChild()]);
     };
 
+    /* ── scanner listener ── */
+    useEffect(() => {
+        let barcodeText = '';
+        let lastKeyTime = Date.now();
+
+        const handleKeyPress = async (e: KeyboardEvent) => {
+            // Only listen if not typing in inputs directly
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                return;
+            }
+
+            const currentTime = Date.now();
+
+            // Scanner threshold usually < 30ms between strokes
+            if (currentTime - lastKeyTime > 50) {
+                barcodeText = '';
+            }
+
+            if (e.key === 'Enter') {
+                if (barcodeText.length > 3) {
+                    const scannedCard = barcodeText;
+                    barcodeText = '';
+
+                    try {
+                        const records = await pb.collection('parents').getList(1, 1, { filter: `card_id="${scannedCard}"` });
+                        if (records.items.length > 0) {
+                            pickParent(records.items[0] as unknown as Parent);
+                            setSuccess(`Tarjeta leída exitosamente. Buscando familia...`);
+                            setTimeout(() => setSuccess(null), 2500);
+                        } else {
+                            console.warn(`Card scan failure: ${scannedCard} not found`);
+                            // We can use the success block temporarily to show error
+                            setSuccess(`Tarjeta no encontrada: ${scannedCard}`);
+                            setTimeout(() => setSuccess(null), 2500);
+                        }
+                    } catch (err) {
+                        console.error('Scan lookup error', err);
+                    }
+                }
+            } else {
+                barcodeText += e.key;
+            }
+            lastKeyTime = currentTime;
+        };
+
+        window.addEventListener('keypress', handleKeyPress);
+        return () => window.removeEventListener('keypress', handleKeyPress);
+    }, []);
+
     /* ── validation helpers ── */
     const onPhone = (e: React.ChangeEvent<HTMLInputElement>) => setPPhone(e.target.value.replace(/\D/g, '').slice(0, 10));
-    const onName = (e: React.ChangeEvent<HTMLInputElement>) => setPName(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, ''));
+    const onName = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const v = e.target.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s]/g, '');
+        setPName(v);
+        if (selParent) { setSelParent(null); setExistingUrl(null); setExistingKids([]); setSelectedKidIds(new Set()); }
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = setTimeout(() => doSearch(v), 350);
+    };
     const onChildName = (id: string, v: string) => updNewChild(id, 'name', v.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, ''));
 
     /* ── camera ── */
@@ -188,10 +247,20 @@ const SecurityCheckIn: React.FC<Props> = ({ onNavigate }) => {
 
             // Create new children in PocketBase
             const allChildIds: string[] = [...selectedKidIds]; // existing selected
+            const createdChildrenObjects = [];
+
             for (const c of newChildren) {
                 if (!c.name.trim() || !c.birth_date) continue;
                 const rec = await pb.collection('children').create({ name: c.name, birth_date: c.birth_date, parent: pid, allergies: c.allergies || '' });
                 allChildIds.push(rec.id);
+                // Store the REAL database record to pass to the POS context
+                createdChildrenObjects.push({
+                    id: rec.id,
+                    name: c.name,
+                    birth_date: c.birth_date,
+                    parent: pid!,
+                    allergies: c.allergies
+                });
             }
 
             // Session will be created atomically during checkout at the POS!
@@ -206,9 +275,7 @@ const SecurityCheckIn: React.FC<Props> = ({ onNavigate }) => {
             // Build selected children list (existing + newly created)
             const allChildObjs: Child[] = [
                 ...existingKids.filter(k => selectedKidIds.has(k.id)),
-                ...newChildren.filter(c => c.name.trim() && c.birth_date).map(c => ({
-                    id: c.id, name: c.name, birth_date: c.birth_date, parent: pid!, allergies: c.allergies,
-                })),
+                ...createdChildrenObjects as Child[],
             ];
 
             // Save to session store → POS will read this and create the checkout
@@ -222,13 +289,13 @@ const SecurityCheckIn: React.FC<Props> = ({ onNavigate }) => {
             setTimeout(() => {
                 setSuccess(null);
                 reset();
-                if (onNavigate) onNavigate('inventory');
+                if (onNavigate) onNavigate('pos');
             }, 2500);
         } catch (err) { console.error('Reg:', err); } finally { setSubmitting(false); }
     };
 
     const reset = () => {
-        setSq(''); setResults([]); setShowDrop(false); setSelParent(null);
+        setResults([]); setShowDrop(false); setSelParent(null);
         setPName(''); setPPhone(''); setPEmail('');
         setPhoto(null); setExistingUrl(null); setCamOn(true);
         setExistingKids([]); setSelectedKidIds(new Set());
@@ -244,8 +311,7 @@ const SecurityCheckIn: React.FC<Props> = ({ onNavigate }) => {
 
     /* ── render ── */
     return (
-        <div className="flex flex-col h-full gap-2.5 overflow-hidden">
-
+        <div className="flex flex-col h-full gap-4 overflow-y-auto pb-6 pr-2">
             {success && (
                 <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-3 flex items-center gap-2.5 shrink-0 animate-in fade-in">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
@@ -253,214 +319,372 @@ const SecurityCheckIn: React.FC<Props> = ({ onNavigate }) => {
                 </div>
             )}
 
-            {/* ═══ HEADER: Title + Search ═══ */}
-            <div ref={boxRef} className="bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-2xl px-5 py-3 shrink-0 shadow-sm">
+            {/* ═══ HEADER ═══ */}
+            <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-2xl px-5 py-3 shrink-0 shadow-sm flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <Shield className="w-4 h-4 text-blue-400 shrink-0" />
-                    <h2 className="text-sm font-bold text-slate-100 shrink-0">Check-In</h2>
-                    <div className="flex-1 relative">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-                        <input value={sq} onChange={onSearchInput}
-                            placeholder="Buscar por nombre o teléfono..."
-                            className="w-full h-10 rounded-xl border border-white/10 bg-slate-800/80 pl-10 pr-4 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner" />
-                        {searching && <div className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />}
-                    </div>
-                    {selParent && (
-                        <>
-                            <div className="flex items-center gap-1.5 text-xs text-blue-300 bg-blue-500/10 px-2.5 py-1 rounded-lg border border-blue-500/20 shrink-0">
-                                <UserCheck className="w-3.5 h-3.5" />
-                                <span className="font-semibold">{selParent.name}</span>
-                                <span className="text-blue-400/60">·</span>
-                                <span className="text-slate-400">Visita #{(selParent.total_visits || 0) + 1}</span>
-                            </div>
-                            <button onClick={reset} className="text-[10px] text-slate-500 hover:text-slate-300 px-2 py-1 rounded-md hover:bg-white/5 transition-colors shrink-0">✕</button>
-                        </>
+                    <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 shrink-0">ASTROPLAY OS | Check-In de Entrada</h2>
+                </div>
+                {selParent && (
+                    <button onClick={reset} className="text-xs font-bold text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-white px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent dark:hover:border-white/10 transition-colors shrink-0 flex items-center gap-2">
+                        <Trash2 className="w-3.5 h-3.5" /> Cancelar Check-In
+                    </button>
+                )}
+            </div>
+
+            {/* ═══ PANEL 1: CLIENTE RESPONSABLE ═══ */}
+            <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+                <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <User className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Paso 1: Cliente Responsable
+                    </h3>
+                    {showNewParentForm && !selParent && (
+                        <button onClick={() => { setShowNewParentForm(false); setPName(''); setPPhone(''); setPEmail(''); }} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors bg-slate-100 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/5">
+                            <ChevronLeft className="w-4 h-4" /> Volver a Búsqueda
+                        </button>
                     )}
                 </div>
+
+                {!selParent ? (
+                    <div className="max-w-3xl">
+                        {!showNewParentForm && (
+                            <div className="space-y-1.5 relative mb-6 z-20" ref={boxRef}>
+                                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Buscar por teléfono o nombre</label>
+                                <div className="relative">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-500/50 pointer-events-none" />
+                                    <input value={pName} onChange={onName} placeholder="Ej. 5512345678 o Juan Pérez"
+                                        className="w-full h-12 rounded-xl border border-slate-200 dark:border-blue-500/30 bg-slate-50 dark:bg-blue-950/20 pl-12 pr-4 text-base text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner" />
+                                    {searching && <div className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />}
+                                </div>
+
+                                {/* Search dropdown (inline) */}
+                                {showDrop && results.length > 0 && (
+                                    <div className="absolute z-50 mt-2 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl shadow-2xl shadow-blue-500/10 dark:shadow-black max-h-[220px] overflow-y-auto">
+                                        <div className="px-3 py-2 text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold bg-slate-50 dark:bg-slate-900/50">{results.length} resultado(s) encontrados</div>
+                                        {results.map(p => (
+                                            <button key={p.id} onClick={() => pickParent(p)}
+                                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-blue-500/20 transition-colors text-left border-b border-slate-100 dark:border-white/5 last:border-0">
+                                                <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-white/10 shrink-0">
+                                                    {p.face_photo
+                                                        ? <img src={pb.files.getURL(p as any, p.face_photo)} alt="" className="w-full h-full object-cover" />
+                                                        : <div className="w-full h-full flex items-center justify-center"><User className="w-5 h-5 text-slate-400 dark:text-slate-500" /></div>}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-base font-bold text-slate-900 dark:text-slate-200 truncate">{p.name}</p>
+                                                    <p className="text-sm text-blue-600 dark:text-blue-400">{p.phone}</p>
+                                                </div>
+                                                {p.total_visits !== undefined && p.total_visits >= 0 ?
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">Visita #{p.total_visits + 1}</span>
+                                                    </div>
+                                                    : null}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Two Columns Dashboard (when not searching and not form) */}
+                        {!showNewParentForm && pName.length < 2 && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in zoom-in-95 duration-300 mb-6">
+                                <div className="flex flex-col gap-3">
+                                    <Button
+                                        onClick={() => setShowNewParentForm(true)}
+                                        variant="primary"
+                                        className="h-16 justify-start px-5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-lg shadow-blue-500/25 border-t border-white/20 rounded-xl"
+                                        icon={<UserPlus className="w-6 h-6 mr-2 opacity-90" />}
+                                    >
+                                        <span className="text-base font-bold">Registrar Nuevo Cliente</span>
+                                    </Button>
+                                    <Button
+                                        onClick={() => { }}
+                                        variant="secondary"
+                                        className="h-16 justify-start px-5 border-2 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl shadow-sm"
+                                        icon={<CreditCard className="w-6 h-6 mr-2 text-blue-500 dark:text-blue-400" />}
+                                    >
+                                        <span className="text-base font-bold">Escanear AstroCard</span>
+                                    </Button>
+                                </div>
+
+                                <div className="bg-slate-50/80 dark:bg-slate-950/40 rounded-xl border border-slate-200 dark:border-white/5 p-4 flex flex-col shadow-inner">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Estado Actual</span>
+                                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 text-xs font-black border border-orange-200 dark:border-orange-500/30">
+                                            <Activity className="w-3.5 h-3.5" />
+                                            {activeKidsCount} Niños en parque
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 flex flex-col gap-2 overflow-y-auto pr-1">
+                                        {recentParents.map(rp => (
+                                            <button key={rp.id} onClick={() => pickParent(rp)} className="flex items-center gap-3 p-2.5 rounded-lg bg-white dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left group shadow-sm border border-slate-100 dark:border-white/5 min-h-[52px]">
+                                                <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 border border-slate-200 dark:border-white/5 overflow-hidden">
+                                                    {rp.face_photo ? (
+                                                        <img src={pb.files.getURL(rp as any, rp.face_photo)} alt="" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <User className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">{rp.name}</p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{rp.phone}</p>
+                                                </div>
+                                                <ChevronLeft className="w-4 h-4 text-slate-300 dark:text-slate-600 rotate-180 group-hover:text-blue-500 transition-colors" />
+                                            </button>
+                                        ))}
+                                        {recentParents.length === 0 && (
+                                            <p className="text-xs text-slate-400 text-center py-4">No hay registros recientes</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Formulario Integrado (shows if selected or if not found) */}
+                        {(showNewParentForm || (pName.length >= 2 && !showDrop)) && (
+                            <div className="p-6 border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-950/30 rounded-2xl shadow-inner animate-in slide-in-from-bottom-2 duration-300 relative z-10">
+                                <p className="text-sm text-blue-600 dark:text-blue-400 font-bold mb-5 flex items-center gap-2">
+                                    <UserPlus className="w-5 h-5" /> Registro de Nuevo Cliente
+                                </p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                    <div className="space-y-1.5">
+                                        <label className="text-sm font-bold text-slate-600 dark:text-slate-400">Teléfono (10 dígitos) *</label>
+                                        <div className="relative">
+                                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                                            <input value={pPhone} onChange={onPhone} placeholder="Ej. 5512345678" type="tel"
+                                                className="w-full h-12 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-slate-900 pl-11 pr-4 text-base text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-sm font-bold text-slate-600 dark:text-slate-400">Nombre Completo *</label>
+                                        <div className="relative">
+                                            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                                            <input value={pName} onChange={onName} placeholder="Ej. Juan Pérez" type="text"
+                                                className="w-full h-12 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-slate-900 pl-11 pr-4 text-base text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-sm font-bold text-slate-600 dark:text-slate-400">Correo Electrónico (Opcional)</label>
+                                        <input value={pEmail} onChange={e => setPEmail(e.target.value)} placeholder="cliente@correo.com" type="email"
+                                            className="w-full h-12 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-slate-900 px-4 text-base text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    /* Tarjeta de Cliente Seleccionado */
+                    <div className="flex items-center gap-5 p-4 rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/20 max-w-2xl">
+                        <div className="w-16 h-16 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-blue-400/50 shrink-0 shadow-lg shadow-blue-500/10">
+                            {existingUrl ? (
+                                <img src={existingUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center"><User className="w-8 h-8 text-blue-400/50" /></div>
+                            )}
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">{selParent.name}</h4>
+                            <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400 mt-1">
+                                <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {selParent.phone}</span>
+                                {selParent.email && <span className="flex items-center gap-1.5 opacity-60">· {selParent.email}</span>}
+                            </div>
+                        </div>
+                        <div className="shrink-0 flex flex-col items-end gap-2">
+                            <div className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-500/20">
+                                <UserCheck className="w-4 h-4" />
+                                <span className="font-bold uppercase tracking-wide">Visita #{(selParent.total_visits || 0) + 1}</span>
+                            </div>
+                            <button onClick={() => { setSelParent(null); setExistingUrl(null); setPhoto(null); setPName(''); }} className="text-xs text-slate-500 hover:text-blue-600 dark:hover:text-white underline decoration-dotted underline-offset-4">Cambiar cliente</button>
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* Search dropdown (portal) */}
-            {showDrop && results.length > 0 && createPortal(
-                <div ref={ddRef} className="fixed z-[9999] bg-slate-900 border border-white/10 rounded-xl shadow-2xl shadow-black/70 max-h-[220px] overflow-y-auto"
-                    style={{ top: ddPos.top, left: ddPos.left, width: ddPos.width }}>
-                    <div className="px-3 py-1.5 text-[10px] text-slate-500 uppercase tracking-wider font-bold">{results.length} resultado(s)</div>
-                    {results.map(p => (
-                        <button key={p.id} onClick={() => pickParent(p)}
-                            className="w-full flex items-center gap-3 px-3 py-2 hover:bg-blue-500/10 transition-colors text-left">
-                            <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-800 border border-white/10 shrink-0">
-                                {p.face_photo
-                                    ? <img src={pb.files.getURL(p as any, p.face_photo)} alt="" className="w-full h-full object-cover" />
-                                    : <div className="w-full h-full flex items-center justify-center"><User className="w-3.5 h-3.5 text-slate-600" /></div>}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-slate-200 truncate">{p.name}</p>
-                                <p className="text-[11px] text-slate-500">{p.phone}</p>
-                            </div>
-                            {p.total_visits && p.total_visits > 0 ? <span className="text-[10px] text-slate-500">Visita #{p.total_visits}</span> : null}
+            {/* ═══ PANEL 2: NIÑOS ASOCIADOS ═══ */}
+            {/* Solo se muestra si hay un padre seleccionado O si se están escribiendo datos de uno nuevo válidos */}
+            {(selParent || (pName.length >= 2 && pPhone.length === 10)) && (
+                <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-2xl p-6 shadow-sm flex flex-col gap-4 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-500 ease-out">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                            <Users className="w-4 h-4 text-orange-500 dark:text-orange-400" /> Paso 2: Niños a Ingresar
+                            <span className="ml-2 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-500/30 px-2 py-0.5 rounded-full text-xs font-black">{totalKids}</span>
+                        </h3>
+                        <button onClick={() => setShowNewChildForm(!showNewChildForm)}
+                            className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-lg transition-all ${showNewChildForm ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-500/25'}`}>
+                            {showNewChildForm ? 'Cerrar Formulario' : <><Plus className="w-4 h-4" /> Registrar Nuevo Niño</>}
                         </button>
-                    ))}
-                </div>,
-                document.body
-            )}
-
-            {/* ═══ BODY ═══ */}
-            <div className="flex-1 flex gap-4 min-h-0 overflow-hidden">
-
-                {/* ── LEFT: Camera ── */}
-                <div className="w-[280px] shrink-0 flex flex-col">
-                    <div className="bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-2xl p-4 shrink-0 shadow-sm">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                            <ScanFace className="w-4 h-4 text-cyan-400" /> Captura Facial
-                        </h3>
-                        {/* Box constraints so it doesn't stretch infinitely. 3:4 portrait aspect ratio. */}
-                        <div className="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800/50 w-full aspect-[3/4] shadow-inner">
-                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-cyan-400/50 rounded-tl z-10" />
-                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-cyan-400/50 rounded-tr z-10" />
-                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-cyan-400/50 rounded-bl z-10" />
-                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-cyan-400/50 rounded-br z-10" />
-                            {camOn && !photo && !existingUrl ? (
-                                <Webcam audio={false} ref={wcRef} screenshotFormat="image/jpeg"
-                                    videoConstraints={{ facingMode: 'user', width: 480, height: 640 }}
-                                    className="absolute inset-0 w-full h-full object-cover" />
-                            ) : photo ? (
-                                <img src={photo} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                            ) : existingUrl ? (
-                                <img src={existingUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                            ) : (
-                                <div className="absolute inset-0 flex items-center justify-center"><Camera className="w-10 h-10 text-slate-700" /></div>
-                            )}
-                        </div>
-                        <div className="mt-4 shrink-0">
-                            {camOn && !photo && !existingUrl
-                                ? <Button onClick={capture} className="w-full h-10 text-sm font-semibold" icon={<Camera className="w-4 h-4" />}>Capturar</Button>
-                                : <Button onClick={retake} variant="secondary" className="w-full h-10 text-sm font-semibold" icon={<Camera className="w-4 h-4" />}>Tomar Otra</Button>}
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── RIGHT: Parent + Children ── */}
-                <div className="flex-1 flex flex-col gap-4 min-h-0 overflow-hidden">
-
-                    {/* Parent form */}
-                    <div className="bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shrink-0 shadow-sm">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                            <User className="w-4 h-4 text-blue-400" /> Responsable
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-[1fr_200px_160px] gap-4">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-slate-400">Nombre *</label>
-                                <div className="relative">
-                                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-                                    <input value={pName} onChange={onName} placeholder="Solo letras"
-                                        className="w-full h-10 rounded-xl border border-white/10 bg-slate-800/80 pl-10 pr-4 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner" />
-                                </div>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-slate-400 flex items-center justify-between">
-                                    <span>Teléfono *</span>
-                                    {pPhone.length > 0 && pPhone.length < 10 && <span className="text-orange-400 text-[10px]">{pPhone.length}/10</span>}
-                                </label>
-                                <div className="relative">
-                                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-                                    <input value={pPhone} onChange={onPhone} placeholder="10 dígitos" type="tel"
-                                        className="w-full h-10 rounded-xl border border-white/10 bg-slate-800/80 pl-10 pr-4 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner" />
-                                </div>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-slate-400">Correo Electrónico</label>
-                                <input value={pEmail} onChange={e => setPEmail(e.target.value)} placeholder="Opcional" type="email"
-                                    className="w-full h-10 rounded-xl border border-white/10 bg-slate-800/80 px-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner" />
-                            </div>
-                        </div>
                     </div>
 
-                    {/* Children section */}
-                    <div className="flex-1 bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-2xl p-5 flex flex-col min-h-0 overflow-hidden shadow-sm">
-                        <div className="flex items-center justify-between mb-4 shrink-0">
-                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                                <Users className="w-4 h-4 text-orange-400" /> Niños
-                                <span className="ml-2 text-xs font-semibold bg-slate-800/80 px-2.5 py-1 rounded-full text-slate-300 shadow-inner">
-                                    {totalKids} seleccionado(s)
-                                </span>
-                            </h3>
-                            <button onClick={addNewChild} className="flex items-center gap-1.5 text-xs font-bold text-blue-400 hover:text-blue-300 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 transition-all shadow-sm">
-                                <Plus className="w-3.5 h-3.5" /> Nuevo
-                            </button>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto min-h-0 space-y-3 pr-1">
-
-                            {/* Existing children (selectable) */}
-                            {existingKids.length > 0 && (
-                                <div className="space-y-2 mb-4">
-                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Registrados</p>
-                                    {existingKids.map(kid => (
-                                        <button key={kid.id} onClick={() => toggleKid(kid.id)}
-                                            className={`w-full flex items-center gap-3 rounded-xl p-3 transition-all text-left border ${selectedKidIds.has(kid.id)
-                                                ? 'bg-emerald-500/10 border-emerald-500/30 shadow-sm shadow-emerald-500/5'
-                                                : 'bg-slate-950/40 border-white/5 hover:border-white/10 hover:bg-slate-800/40'
-                                                }`}>
-                                            <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all shadow-inner ${selectedKidIds.has(kid.id)
-                                                ? 'bg-emerald-500 text-white shadow-emerald-500/30'
-                                                : 'bg-slate-800 border border-white/10'
-                                                }`}>
-                                                {selectedKidIds.has(kid.id) && <Check className="w-3.5 h-3.5" />}
-                                            </div>
-                                            <span className="text-sm font-semibold text-slate-200 flex-1 truncate">{kid.name}</span>
-                                            <span className="text-xs text-slate-400 font-medium">{fmtDate(kid.birth_date)}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* New children entries */}
-                            {newChildren.length > 0 && (
-                                <div className="space-y-2">
-                                    {existingKids.length > 0 && (
-                                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Nuevos</p>
-                                    )}
-                                    {newChildren.map(child => (
-                                        <div key={child.id} className="bg-slate-950/40 border border-white/5 rounded-xl p-4 relative group hover:border-white/10 transition-colors shadow-sm">
-                                            {newChildren.length > 1 && (
-                                                <button onClick={() => rmNewChild(child.id)}
-                                                    className="absolute top-2 right-2 p-1.5 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all z-10 rounded-lg hover:bg-red-400/10">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                            <div className="grid grid-cols-1 md:grid-cols-[1fr_200px] gap-3 mb-3">
-                                                <div className="space-y-1.5">
-                                                    <label className="text-xs font-medium text-slate-400">Nombre *</label>
-                                                    <input value={child.name} onChange={e => onChildName(child.id, e.target.value)} placeholder="Nombre del niño"
-                                                        className="w-full h-9 rounded-lg border border-white/10 bg-slate-800/80 px-3 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all shadow-inner" />
-                                                </div>
-                                                <div className="space-y-1.5">
-                                                    <label className="text-xs font-medium text-slate-400">Nacimiento *</label>
-                                                    <DatePicker value={child.birth_date} onChange={d => updNewChild(child.id, 'birth_date', d)} placeholder="dd/mm/aaaa" maxDate={TODAY} />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <AlertCircle className="w-3.5 h-3.5 text-orange-400/70 shrink-0" />
-                                                    <input value={child.allergies} onChange={e => updNewChild(child.id, 'allergies', e.target.value)} placeholder="Notas médicas o alergias (opcional)"
-                                                        className="w-full h-8 rounded-lg border border-white/5 bg-slate-800/40 px-3 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-orange-500/30 transition-all shadow-inner" />
-                                                </div>
+                    {/* Formulario Nuevo Niño (Colapsable) */}
+                    {showNewChildForm && (
+                        <div className="bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-xl p-5 animate-in slide-in-from-top-2">
+                            <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-200 dark:border-white/5 pb-2">Registrando Nuevo(s) Niño(s)</h4>
+                            <div className="space-y-4">
+                                {newChildren.map((child) => (
+                                    <div key={child.id} className="grid grid-cols-1 lg:grid-cols-[1fr_200px_1fr_auto] gap-4 items-start">
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Nombre del niño *</label>
+                                            <input value={child.name} onChange={e => onChildName(child.id, e.target.value)} placeholder="Ej. Mateo Pérez"
+                                                className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800/80 px-4 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Fecha de Nacimiento *</label>
+                                            <DatePicker value={child.birth_date} onChange={d => updNewChild(child.id, 'birth_date', d)} placeholder="dd/mm/aaaa" maxDate={TODAY} />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Notas Médicas / Alergias</label>
+                                            <div className="relative">
+                                                <AlertCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-500/50 dark:text-orange-400/50" />
+                                                <input value={child.allergies} onChange={e => updNewChild(child.id, 'allergies', e.target.value)} placeholder="Opcional"
+                                                    className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800/80 pl-9 pr-4 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/30" />
                                             </div>
                                         </div>
-                                    ))}
+                                        {newChildren.length > 1 && (
+                                            <div className="pt-6">
+                                                <button onClick={() => rmNewChild(child.id)} className="p-2 text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-400/10 rounded-lg transition-colors">
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                                <div className="border-t border-slate-200 dark:border-white/5 pt-3 mt-4">
+                                    <button onClick={addNewChild} className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 transition-colors">
+                                        <Plus className="w-3.5 h-3.5" /> Agregar otro niño al formulario
+                                    </button>
                                 </div>
-                            )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Grid de Niños Existentes */}
+                    {existingKids.length > 0 && (
+                        <div className="mt-2">
+                            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3">Selecciona a los niños para ingresar:</p>
+                            <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+                                {existingKids.map(kid => {
+                                    const isSelected = selectedKidIds.has(kid.id);
+                                    let ageStr = "Edad desc.";
+                                    if (kid.birth_date) {
+                                        const birth = new Date(kid.birth_date);
+                                        const ageDifMs = Date.now() - birth.getTime();
+                                        const ageDate = new Date(ageDifMs);
+                                        ageStr = `${Math.abs(ageDate.getUTCFullYear() - 1970)} años`;
+                                    }
+
+                                    return (
+                                        <button key={kid.id} onClick={() => toggleKid(kid.id)}
+                                            className={`relative flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 text-left overflow-hidden ${isSelected
+                                                ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-500 shadow-md shadow-blue-500/20'
+                                                : 'bg-white dark:bg-slate-800/50 border-slate-200 dark:border-white/5 hover:border-blue-300 dark:hover:border-white/10 hover:shadow-sm'
+                                                }`}>
+
+                                            {/* Checkbox Icon */}
+                                            <div className="absolute top-3 right-3 shrink-0">
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${isSelected ? 'bg-blue-500 text-white' : 'bg-slate-100 dark:bg-slate-700 border-2 border-slate-300 dark:border-slate-600'
+                                                    }`}>
+                                                    {isSelected ? <Check className="w-4 h-4" /> : null}
+                                                </div>
+                                            </div>
+
+                                            {/* Avatar mock */}
+                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg shrink-0 ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                                                }`}>
+                                                {kid.name.charAt(0).toUpperCase()}
+                                            </div>
+
+                                            <div className="flex-1 min-w-0 pr-6">
+                                                <p className={`font-bold text-base truncate ${isSelected ? 'text-blue-800 dark:text-blue-100' : 'text-slate-800 dark:text-slate-300'}`}>{kid.name}</p>
+                                                <p className={`text-sm ${isSelected ? 'text-blue-600 dark:text-blue-300/80' : 'text-slate-500'}`}>{ageStr}</p>
+                                                {kid.allergies && (
+                                                    <p className="text-[10px] text-orange-500 dark:text-orange-400 truncate mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Info médica</p>
+                                                )}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {existingKids.length === 0 && !showNewChildForm && pName.length > 2 && (
+                        <div className="text-center py-6 border border-dashed border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-950/20 rounded-xl mt-2">
+                            <Users className="w-8 h-8 text-slate-400 dark:text-slate-600 mx-auto mb-2" />
+                            <p className="text-slate-600 dark:text-slate-400 text-sm">No hay niños registrados.</p>
+                            <p className="text-slate-500 text-xs mt-1">Haz clic en "Registrar Nuevo Niño" arriba para comenzar.</p>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ═══ PANEL 3: VERIFICACIÓN FACIAL ═══ */}
+            {totalKids > 0 && (
+                <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-2xl p-6 shadow-sm flex flex-col gap-4 animate-in slide-in-from-top-4">
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2 mb-2">
+                        <ScanFace className="w-4 h-4 text-cyan-600 dark:text-cyan-400" /> Paso 3: Verificación Facial
+                    </h3>
+
+                    <div className="flex flex-col md:flex-row gap-8 items-center md:items-stretch">
+
+                        {/* Camera Box */}
+                        <div className="w-full max-w-[240px] shrink-0">
+                            <div className="relative rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-950 border-2 border-slate-300 dark:border-slate-800 w-full aspect-[3/4] shadow-xl dark:shadow-2xl">
+                                <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-cyan-500/70 dark:border-cyan-400/70 rounded-tl z-10" />
+                                <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-cyan-400/70 rounded-tr z-10" />
+                                <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-cyan-400/70 rounded-bl z-10" />
+                                <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-cyan-400/70 rounded-br z-10" />
+
+                                {camOn && !photo && !existingUrl ? (
+                                    <Webcam audio={false} ref={wcRef} screenshotFormat="image/jpeg"
+                                        videoConstraints={{ facingMode: 'user', width: 480, height: 640 }}
+                                        className="absolute inset-0 w-full h-full object-cover scale-x-[-1]" />
+                                ) : photo ? (
+                                    <img src={photo} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                                ) : existingUrl ? (
+                                    <img src={existingUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                                ) : (
+                                    <div className="absolute inset-0 flex items-center justify-center"><Camera className="w-10 h-10 text-slate-400 dark:text-slate-700" /></div>
+                                )}
+                            </div>
+                            <div className="mt-3 flex flex-col gap-2">
+                                {camOn && !photo && !existingUrl
+                                    ? <Button onClick={capture} variant="secondary" className="w-full text-sm font-bold bg-white hover:bg-slate-50 border-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white dark:border-slate-700 shadow-sm py-3" icon={<Camera className="w-4 h-4" />}>Capturar Rostro</Button>
+                                    : <Button onClick={retake} variant="ghost" className="w-full text-sm font-bold border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 py-3" icon={<ScanFace className="w-4 h-4" />}>Tomar Otra Foto</Button>}
+                            </div>
+                        </div>
+
+                        {/* Summary & Final Action */}
+                        <div className="flex-1 flex flex-col justify-center bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200 dark:border-white/5 rounded-2xl p-6">
+                            <div className="mb-6 space-y-3">
+                                <h4 className="text-slate-500 dark:text-slate-400 uppercase tracking-wider text-xs font-bold">Resumen de Ingreso</h4>
+                                <p className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+                                    <User className="w-6 h-6 text-blue-600 dark:text-blue-400" /> {pName || "Cliente No Definido"}
+                                </p>
+                                <p className="text-xl font-bold text-slate-700 dark:text-slate-200 flex items-center gap-3">
+                                    <Users className="w-6 h-6 text-orange-500 dark:text-orange-400" /> {totalKids} Niño{totalKids !== 1 ? 's' : ''} seleccionado{totalKids !== 1 ? 's' : ''}
+                                </p>
+                                {!hasPhoto && (
+                                    <p className="text-sm text-red-400 font-bold flex items-center gap-1.5 mt-2 bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/20 w-fit">
+                                        <AlertCircle className="w-4 h-4" /> Fotografía facial obligatoria para el responsable.
+                                    </p>
+                                )}
+                            </div>
+
+                            <Button
+                                onClick={register}
+                                isLoading={submitting}
+                                disabled={!valid}
+                                className={`w-full py-4 text-base font-bold transition-all duration-300 rounded-xl ${valid ? '!bg-emerald-600 hover:!bg-emerald-500 text-white shadow-md shadow-emerald-500/20' : 'bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-white/5'
+                                    }`}
+                                icon={<Shield className="w-5 h-5" />}
+                            >
+                                Finalizar Entrada → POS
+                            </Button>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            {/* ═══ FOOTER ═══ */}
-            <div className="shrink-0">
-                <Button onClick={register} isLoading={submitting} disabled={!valid}
-                    className="w-full h-10 text-sm font-bold uppercase tracking-wider" icon={<Shield className="w-4 h-4" />}>
-                    Registrar Entrada ({totalKids} niño{totalKids !== 1 ? 's' : ''}) → Ir a POS
-                </Button>
-            </div>
+            )}
         </div>
     );
 };

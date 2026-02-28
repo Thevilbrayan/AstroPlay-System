@@ -1,0 +1,3 @@
+src/components/inventory/InventoryPOS.tsx(79,56): error TS2339: Property 'type' does not exist on type 'Product'.
+src/components/inventory/InventoryPOS.tsx(80,55): error TS2339: Property 'type' does not exist on type 'Product'.
+src/components/inventory/InventoryPOS.tsx(80,85): error TS2339: Property 'type' does not exist on type 'Product'.

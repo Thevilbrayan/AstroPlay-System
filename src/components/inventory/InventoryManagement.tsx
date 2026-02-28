@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Package, Zap, Edit3, Edit, Plus, Minus, TrendingUp, AlertTriangle, DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Search, Package, Zap, Plus, Minus, TrendingUp, AlertTriangle, DollarSign, Coffee } from 'lucide-react';
 import { Product } from '../../types';
 import Input from '../ui/Input';
 
@@ -17,11 +17,11 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({
     onQuickStockAdjust,
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterType, setFilterType] = useState<'all' | 'physical' | 'service'>('all');
+    const [filterCategory, setFilterCategory] = useState<'all' | 'service' | 'snack' | 'socks'>('all');
 
     // Computed metrics
     const metrics = useMemo(() => {
-        const physicalProducts = products.filter(p => p.type === 'physical' || !p.type);
+        const physicalProducts = products.filter(p => p.category === 'snack' || p.category === 'socks');
         const inventoryValue = physicalProducts.reduce((sum, p) => sum + ((p.cost || 0) * (p.stock || 0)), 0);
         const lowStockCount = physicalProducts.filter(p => (p.stock || 0) > 0 && p.min_stock && (p.stock || 0) <= p.min_stock).length;
         return { inventoryValue, lowStockCount };
@@ -30,43 +30,55 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({
     const filteredProducts = useMemo(() => {
         return products.filter(product => {
             const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-            let matchesType = true;
-            if (filterType === 'physical') matchesType = product.type === 'physical' || !product.type;
-            else if (filterType === 'service') matchesType = product.type === 'service_fixed' || product.type === 'service_open';
-            return matchesSearch && matchesType;
+            let matchesCategory = true;
+            if (filterCategory !== 'all') {
+                // Fallback mapping for older db items without category set yet (using name as heuristic)
+                const fallbackCat = product.name.toLowerCase().includes('calceta') ? 'socks'
+                    : product.name.toLowerCase().match(/hora|minuto|tiempo|pase|servicio/) ? 'service'
+                        : 'snack';
+                const actualCat = product.category || fallbackCat;
+                matchesCategory = actualCat === filterCategory;
+            }
+            return matchesSearch && matchesCategory;
         });
-    }, [products, searchQuery, filterType]);
+    }, [products, searchQuery, filterCategory]);
 
-    const getTypeLabel = (type?: string) => {
-        switch (type) {
-            case 'service_fixed': return 'Serv. Fijo';
-            case 'service_open': return 'Serv. Abierto';
-            default: return 'Físico';
+    const getCategoryLabel = (product: Product) => {
+        const cat = product.category || (product.name.toLowerCase().includes('calceta') ? 'socks' : product.name.toLowerCase().match(/hora|minuto|tiempo|pase|servicio/) ? 'service' : 'snack');
+        switch (cat) {
+            case 'service': return 'Servicio';
+            case 'snack': return 'Snack';
+            case 'socks': return 'Calceta';
+            default: return 'Producto';
         }
     };
 
-    const getTypeIcon = (type?: string) => {
-        switch (type) {
-            case 'service_fixed': return <Zap className="w-3.5 h-3.5" />;
-            case 'service_open': return <Edit3 className="w-3.5 h-3.5" />;
+    const getCategoryIcon = (product: Product) => {
+        const cat = product.category || (product.name.toLowerCase().includes('calceta') ? 'socks' : product.name.toLowerCase().match(/hora|minuto|tiempo|pase|servicio/) ? 'service' : 'snack');
+        switch (cat) {
+            case 'service': return <Zap className="w-3.5 h-3.5" />;
+            case 'snack': return <Coffee className="w-3.5 h-3.5" />;
+            case 'socks': return <Package className="w-3.5 h-3.5" />;
             default: return <Package className="w-3.5 h-3.5" />;
         }
     };
 
-    const getTypeBadgeClass = (type?: string) => {
-        switch (type) {
-            case 'service_fixed': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
-            case 'service_open': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-            default: return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+    const getCategoryBadgeClass = (product: Product) => {
+        const cat = product.category || (product.name.toLowerCase().includes('calceta') ? 'socks' : product.name.toLowerCase().match(/hora|minuto|tiempo|pase|servicio/) ? 'service' : 'snack');
+        switch (cat) {
+            case 'service': return 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/20';
+            case 'socks': return 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20';
+            default: return 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20';
         }
     };
 
     const getStockHealthClass = (product: Product) => {
-        if (product.type && product.type !== 'physical') return 'text-slate-600';
+        const cat = product.category || (product.name.toLowerCase().match(/hora|minuto|tiempo|pase|servicio/) ? 'service' : 'snack');
+        if (cat === 'service') return 'text-slate-500 dark:text-slate-600';
         const s = product.stock || 0;
-        if (s === 0) return 'text-red-400 font-bold';
-        if (product.min_stock && s <= product.min_stock) return 'text-orange-400 font-bold';
-        return 'text-green-400';
+        if (s === 0) return 'text-red-600 dark:text-red-400 font-bold';
+        if (product.min_stock && s <= product.min_stock) return 'text-orange-600 dark:text-orange-400 font-bold';
+        return 'text-green-600 dark:text-green-400';
     };
 
     const metricCards = [
@@ -74,25 +86,34 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({
             label: 'Valor Inventario (Costo)',
             value: formatCurrency(metrics.inventoryValue),
             icon: DollarSign,
-            color: 'from-blue-600/20 to-indigo-600/20',
-            iconColor: 'text-blue-400',
-            borderColor: 'border-blue-500/20',
+            color: 'from-blue-50 to-indigo-50 dark:from-blue-600/20 dark:to-indigo-600/20',
+            iconColor: 'text-blue-600 dark:text-blue-400',
+            iconBg: 'bg-blue-100 dark:bg-slate-900/50',
+            borderColor: 'border-blue-200 dark:border-blue-500/20',
+            textColor: 'text-slate-900 dark:text-white',
+            labelColor: 'text-slate-500 dark:text-slate-400',
         },
         {
             label: 'Productos Stock Bajo',
             value: metrics.lowStockCount.toString(),
             icon: AlertTriangle,
-            color: 'from-orange-600/20 to-amber-600/20',
-            iconColor: 'text-orange-400',
-            borderColor: 'border-orange-500/20',
+            color: 'from-orange-50 to-amber-50 dark:from-orange-600/20 dark:to-amber-600/20',
+            iconColor: 'text-orange-600 dark:text-orange-400',
+            iconBg: 'bg-orange-100 dark:bg-slate-900/50',
+            borderColor: 'border-orange-200 dark:border-orange-500/20',
+            textColor: 'text-slate-900 dark:text-white',
+            labelColor: 'text-slate-500 dark:text-slate-400',
         },
         {
             label: 'Ventas del Turno',
             value: formatCurrency(0),
             icon: TrendingUp,
-            color: 'from-emerald-600/20 to-green-600/20',
-            iconColor: 'text-emerald-400',
-            borderColor: 'border-emerald-500/20',
+            color: 'from-emerald-50 to-green-50 dark:from-emerald-600/20 dark:to-green-600/20',
+            iconColor: 'text-emerald-600 dark:text-emerald-400',
+            iconBg: 'bg-emerald-100 dark:bg-slate-900/50',
+            borderColor: 'border-emerald-200 dark:border-emerald-500/20',
+            textColor: 'text-slate-900 dark:text-white',
+            labelColor: 'text-slate-500 dark:text-slate-400',
         },
     ];
 
@@ -101,14 +122,14 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({
             {/* Metric Cards */}
             <div className="grid grid-cols-3 gap-4">
                 {metricCards.map(card => (
-                    <div key={card.label} className={`bg-gradient-to-br ${card.color} backdrop-blur-xl border ${card.borderColor} rounded-2xl p-5 ring-1 ring-white/5`}>
+                    <div key={card.label} className={`bg-gradient-to-br ${card.color} backdrop-blur-xl border ${card.borderColor} rounded-2xl p-5 ring-1 ring-black/5 dark:ring-white/5`}>
                         <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">{card.label}</span>
-                            <div className={`p-2 rounded-lg bg-slate-900/50 ${card.iconColor}`}>
+                            <span className={`text-xs font-medium uppercase tracking-wider ${card.labelColor}`}>{card.label}</span>
+                            <div className={`p-2 rounded-lg ${card.iconBg} ${card.iconColor}`}>
                                 <card.icon className="w-4 h-4" />
                             </div>
                         </div>
-                        <p className="text-2xl font-bold text-white">{card.value}</p>
+                        <p className={`text-2xl font-bold ${card.textColor}`}>{card.value}</p>
                     </div>
                 ))}
             </div>
@@ -117,24 +138,25 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({
             <div className="flex items-center gap-4">
                 <div className="relative flex-1 max-w-sm">
                     <Input
-                        icon={<Search className="w-5 h-5" />}
+                        icon={<Search className="w-5 h-5 text-slate-400" />}
                         placeholder="Buscar en inventario..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="bg-slate-900/50 border-white/10"
+                        className="bg-white/80 dark:bg-slate-900/50 border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100"
                     />
                 </div>
 
-                <div className="flex p-1 bg-slate-900/50 rounded-xl border border-white/5">
+                <div className="flex p-1 bg-slate-100 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-white/5">
                     {[
                         { key: 'all' as const, label: 'Todos' },
-                        { key: 'physical' as const, label: 'Físicos' },
                         { key: 'service' as const, label: 'Servicios' },
+                        { key: 'snack' as const, label: 'Snacks' },
+                        { key: 'socks' as const, label: 'Calcetas' },
                     ].map(opt => (
                         <button
                             key={opt.key}
-                            onClick={() => setFilterType(opt.key)}
-                            className={`px-4 py-1.5 text-xs font-medium rounded-lg transition-all ${filterType === opt.key ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                            onClick={() => setFilterCategory(opt.key)}
+                            className={`px-4 py-1.5 text-xs font-medium rounded-lg transition-all ${filterCategory === opt.key ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-200 dark:ring-transparent' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
                         >
                             {opt.label}
                         </button>
@@ -142,127 +164,111 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({
                 </div>
             </div>
 
-            {/* Data Table */}
-            <div className="flex-1 overflow-hidden bg-slate-900/30 backdrop-blur-xl border border-white/5 rounded-2xl ring-1 ring-white/5">
-                <div className="overflow-x-auto overflow-y-auto h-full">
-                    <table className="w-full text-sm">
-                        <thead className="sticky top-0 z-10">
-                            <tr className="bg-slate-900/90 backdrop-blur-md border-b border-white/5">
-                                <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Producto</th>
-                                <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tipo</th>
-                                <th className="text-right py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Costo</th>
-                                <th className="text-right py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Precio</th>
-                                <th className="text-right py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Margen</th>
-                                <th className="text-center py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Stock</th>
-                                <th className="text-center py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Min</th>
-                                <th className="text-center py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {filteredProducts.map(product => {
-                                const margin = product.price - (product.cost || 0);
-                                const marginPercent = product.cost ? ((margin / product.cost) * 100).toFixed(0) : '—';
-                                const isPhysical = product.type === 'physical' || !product.type;
+            {/* Data Grid */}
+            <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-4">
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                    {filteredProducts.map(product => {
+                        const cat = product.category || (product.name.toLowerCase().match(/hora|minuto|tiempo|pase|servicio/) ? 'service' : 'snack');
+                        const isService = cat === 'service';
 
-                                return (
-                                    <tr key={product.id} className="hover:bg-white/[0.02] transition-colors group">
-                                        {/* Product */}
-                                        <td className="py-3 px-4">
-                                            <div className="flex items-center gap-3">
-                                                {product.imagen ? (
-                                                    <img src={product.imagen} alt="" className="w-9 h-9 rounded-lg object-cover bg-slate-800 ring-1 ring-white/10" />
-                                                ) : (
-                                                    <div className="w-9 h-9 rounded-lg bg-slate-800 flex items-center justify-center text-slate-600 ring-1 ring-white/10">
-                                                        {getTypeIcon(product.type)}
-                                                    </div>
-                                                )}
-                                                <span className="font-medium text-slate-200 truncate max-w-[180px]">{product.name}</span>
-                                            </div>
-                                        </td>
-                                        {/* Type */}
-                                        <td className="py-3 px-3">
-                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${getTypeBadgeClass(product.type)}`}>
-                                                {getTypeIcon(product.type)}
-                                                {getTypeLabel(product.type)}
+                        return (
+                            <div key={product.id} className="group relative bg-white/80 dark:bg-slate-900/40 backdrop-blur-md border border-gray-200 dark:border-white/5 rounded-2xl overflow-hidden transition-all duration-200 hover:border-gray-300 dark:hover:border-white/10 hover:shadow-xl hover:shadow-blue-500/5 flex flex-col h-full">
+                                {/* Image / Icon Area */}
+                                <div className="aspect-video relative overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
+                                    {product.imagen ? (
+                                        <img src={product.imagen} alt={product.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-600">
+                                            {getCategoryIcon(product)}
+                                        </div>
+                                    )}
+                                    <div className="absolute top-2 left-2">
+                                        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold border backdrop-blur-md shadow-sm ${getCategoryBadgeClass(product)}`}>
+                                            {getCategoryIcon(product)}
+                                            {getCategoryLabel(product)}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Content Area */}
+                                <div className="p-4 flex flex-col flex-1">
+                                    <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-sm truncate mb-1">{product.name}</h3>
+
+                                    <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100 dark:border-white/5">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] text-slate-500 font-medium tracking-wider uppercase">Costo</span>
+                                            <span className="text-xs text-slate-600 dark:text-slate-400 font-mono">{product.cost ? formatCurrency(product.cost) : '—'}</span>
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-[10px] pr-1.5 text-slate-500 font-medium tracking-wider uppercase">Venta</span>
+                                            <span className="text-sm font-bold text-slate-900 dark:text-white font-mono break-words">
+                                                {product.price === 0 && isService ? 'Abierto' : formatCurrency(product.price)}
                                             </span>
-                                        </td>
-                                        <td className="py-3 px-3 text-right text-slate-400 font-mono text-xs">
-                                            {product.cost ? formatCurrency(product.cost) : '—'}
-                                        </td>
-                                        {/* Price */}
-                                        <td className="py-3 px-3 text-right text-white font-mono text-xs font-semibold">
-                                            {product.type === 'service_open' ? 'Variable' : formatCurrency(product.price)}
-                                        </td>
-                                        {/* Margin */}
-                                        <td className="py-3 px-3 text-right">
-                                            {product.cost ? (
-                                                <div className="flex items-center justify-end gap-1">
-                                                    {margin >= 0 ? (
-                                                        <ArrowUpRight className="w-3 h-3 text-emerald-400" />
-                                                    ) : (
-                                                        <ArrowDownRight className="w-3 h-3 text-red-400" />
-                                                    )}
-                                                    <span className={`font-mono text-xs font-semibold ${margin >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                        {formatCurrency(margin)}
-                                                    </span>
-                                                    <span className="text-[10px] text-slate-500 ml-0.5">({marginPercent}%)</span>
-                                                </div>
-                                            ) : (
-                                                <span className="text-slate-600">—</span>
-                                            )}
-                                        </td>
-                                        {/* Stock */}
-                                        <td className="py-3 px-3 text-center">
-                                            {isPhysical ? (
-                                                <div className="flex items-center justify-center gap-1">
+                                        </div>
+                                    </div>
+
+                                    {/* Additional info dynamically rendered based on category */}
+                                    <div className="-mt-1 mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                                        {cat === 'socks' && product.size && <span className="bg-slate-100 dark:bg-white/5 py-0.5 px-2 rounded-md">Talla: {product.size}</span>}
+                                        {cat === 'snack' && product.subcategory && <span className="capitalize">{product.subcategory}</span>}
+                                        {cat === 'service' && product.duration_min && product.duration_min > 0 && <span>{product.duration_min} min</span>}
+                                    </div>
+
+                                    {/* Action Row: Stock Controls & Edit */}
+                                    <div className="mt-auto pt-3 border-t border-gray-100 dark:border-white/5 flex gap-2 h-12">
+                                        {!isService ? (
+                                            <>
+                                                {/* Left: Stock Controls */}
+                                                <div className="flex-1 flex items-center justify-between bg-slate-50 dark:bg-slate-950/50 rounded-xl p-1 border border-gray-200 dark:border-white/5 shadow-inner">
                                                     <button
                                                         onClick={() => onQuickStockAdjust(product.id, -1)}
                                                         disabled={(product.stock || 0) <= 0}
-                                                        className="p-1 rounded hover:bg-white/5 text-slate-500 hover:text-white transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-0"
+                                                        className="p-2 rounded-lg hover:bg-white dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors disabled:opacity-30 disabled:hover:bg-transparent shadow-sm dark:shadow-none bg-white dark:bg-transparent border border-gray-100 dark:border-transparent"
                                                     >
-                                                        <Minus className="w-3 h-3" />
+                                                        <Minus className="w-4 h-4" />
                                                     </button>
-                                                    <span className={`font-mono text-sm min-w-[28px] text-center ${getStockHealthClass(product)}`}>
+                                                    <span className={`font-mono text-sm font-bold min-w-[32px] text-center ${getStockHealthClass(product)}`}>
                                                         {product.stock || 0}
                                                     </span>
                                                     <button
                                                         onClick={() => onQuickStockAdjust(product.id, 1)}
-                                                        className="p-1 rounded hover:bg-white/5 text-slate-500 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                                                        className="p-2 rounded-lg hover:bg-white dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors shadow-sm dark:shadow-none bg-white dark:bg-transparent border border-gray-100 dark:border-transparent"
                                                     >
-                                                        <Plus className="w-3 h-3" />
+                                                        <Plus className="w-4 h-4" />
                                                     </button>
                                                 </div>
-                                            ) : (
-                                                <span className="text-slate-600">∞</span>
-                                            )}
-                                        </td>
-                                        {/* Min Stock */}
-                                        <td className="py-3 px-3 text-center text-slate-500 font-mono text-xs">
-                                            {isPhysical ? product.min_stock : '—'}
-                                        </td>
-                                        {/* Actions */}
-                                        <td className="py-3 px-3 text-center">
+
+                                                {/* Right: Edit Button */}
+                                                <button
+                                                    onClick={() => onEditProduct(product)}
+                                                    className="w-12 flex items-center justify-center shrink-0 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 border border-blue-200 dark:border-blue-500/20 transition-all font-medium"
+                                                    title="Editar producto"
+                                                >
+                                                    <span className="text-xs font-bold leading-none select-none">EDT</span>
+                                                </button>
+                                            </>
+                                        ) : (
+                                            /* Services: Edit Button filling width */
                                             <button
                                                 onClick={() => onEditProduct(product)}
-                                                className="p-2 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
-                                                title="Editar producto"
+                                                className="w-full h-full flex items-center justify-center gap-2 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 border border-blue-200 dark:border-blue-500/20 transition-all font-medium text-sm"
                                             >
-                                                <Edit className="w-4 h-4" />
+                                                <span>Editar Servicio</span>
                                             </button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-
-                    {filteredProducts.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-16 text-slate-500">
-                            <Package className="w-10 h-10 mb-3 opacity-20" />
-                            <p className="text-sm">No se encontraron productos</p>
-                        </div>
-                    )}
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
+
+                {filteredProducts.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-slate-500">
+                        <Package className="w-12 h-12 mb-4 opacity-20" />
+                        <p className="text-base font-medium">No se encontraron productos</p>
+                    </div>
+                )}
             </div>
         </div>
     );

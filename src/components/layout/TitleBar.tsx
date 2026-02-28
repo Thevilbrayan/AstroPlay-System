@@ -55,7 +55,7 @@ export function TitleBar() {
             <button
                 onClick={handleFullscreen}
                 title="Salir de pantalla completa (F11)"
-                className="fixed top-2 right-2 z-[200] flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-800 backdrop-blur-sm transition-all duration-200 opacity-30 hover:opacity-100 text-xs"
+                className="fixed top-2 right-2 z-[200] flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-slate-300/50 dark:border-slate-700/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 backdrop-blur-sm transition-all duration-200 opacity-30 hover:opacity-100 text-xs"
             >
                 <Shrink className="w-3.5 h-3.5" />
                 <span>Salir (F11)</span>
@@ -65,7 +65,7 @@ export function TitleBar() {
 
     return (
         <div
-            className="fixed top-0 left-0 right-0 z-[100] flex items-center h-9 bg-slate-950 border-b border-slate-800/60 select-none"
+            className="fixed top-0 left-0 right-0 z-[100] flex items-center h-9 bg-white dark:bg-slate-950 border-b border-slate-200/60 dark:border-slate-800/60 select-none"
             data-tauri-drag-region
         >
             {/* Left: Branding */}
@@ -73,7 +73,7 @@ export function TitleBar() {
                 <div className="w-4 h-4 rounded-full bg-gradient-to-br from-violet-500 to-cyan-400 flex items-center justify-center pointer-events-none">
                     <div className="w-1.5 h-1.5 rounded-full bg-white/90" />
                 </div>
-                <span className="text-[11px] font-semibold tracking-[0.15em] text-slate-300 uppercase pointer-events-none">
+                <span className="text-[11px] font-semibold tracking-[0.15em] text-slate-700 dark:text-slate-300 uppercase pointer-events-none">
                     AstroPlay OS
                 </span>
             </div>
@@ -84,19 +84,19 @@ export function TitleBar() {
             {/* Right: Window controls */}
             <div className="flex items-center h-full shrink-0">
                 <button onClick={handleFullscreen} title="Pantalla completa (F11)"
-                    className="flex items-center justify-center w-10 h-full text-slate-400 hover:text-cyan-400 hover:bg-slate-800/70 transition-colors duration-150 cursor-default">
+                    className="flex items-center justify-center w-10 h-full text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 transition-colors duration-150 cursor-default">
                     <Maximize2 className="w-3.5 h-3.5" />
                 </button>
                 <button onClick={handleMinimize} title="Minimizar"
-                    className="flex items-center justify-center w-10 h-full text-slate-400 hover:text-white hover:bg-slate-800/70 transition-colors duration-150 cursor-default">
+                    className="flex items-center justify-center w-10 h-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/70 transition-colors duration-150 cursor-default">
                     <Minus className="w-3.5 h-3.5" />
                 </button>
                 <button onClick={handleMaximize} title={isMaximized ? 'Restaurar' : 'Maximizar'}
-                    className="flex items-center justify-center w-10 h-full text-slate-400 hover:text-white hover:bg-slate-800/70 transition-colors duration-150 cursor-default">
+                    className="flex items-center justify-center w-10 h-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/70 transition-colors duration-150 cursor-default">
                     {isMaximized ? <Copy className="w-3 h-3" /> : <Square className="w-3 h-3" />}
                 </button>
                 <button onClick={handleClose} title="Cerrar"
-                    className="flex items-center justify-center w-12 h-full text-slate-400 hover:text-white hover:bg-red-600 transition-colors duration-150 cursor-default">
+                    className="flex items-center justify-center w-12 h-full text-slate-500 dark:text-slate-400 hover:text-white dark:hover:text-white hover:bg-red-500 dark:hover:bg-red-600 transition-colors duration-150 cursor-default">
                     <X className="w-3.5 h-3.5" />
                 </button>
             </div>

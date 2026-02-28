@@ -26,20 +26,20 @@ const ServicePriceModal: React.FC<ServicePriceModalProps> = ({ isOpen, product, 
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xl p-4">
-            <div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 w-full max-w-sm rounded-2xl shadow-2xl p-6 ring-1 ring-white/10 animate-in fade-in zoom-in duration-200">
+            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200 dark:border-white/10 w-full max-w-sm rounded-2xl shadow-2xl p-6 ring-1 ring-slate-200 dark:ring-white/10 animate-in fade-in zoom-in duration-200">
                 <div className="flex items-center gap-3 mb-6">
-                    <div className="p-3 bg-blue-500/10 rounded-xl text-blue-500">
+                    <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-xl text-blue-600 dark:text-blue-500">
                         <Edit3 className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-white">Servicio Abierto</h3>
-                        <p className="text-sm text-slate-400">{product.name}</p>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Servicio Abierto</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{product.name}</p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-400 mb-2">Ingresa el Monto</label>
+                        <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Ingresa el Monto</label>
                         <div className="relative">
                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">$</span>
                             <input
@@ -52,7 +52,7 @@ const ServicePriceModal: React.FC<ServicePriceModalProps> = ({ isOpen, product, 
                                         handleConfirm();
                                     }
                                 }}
-                                className="w-full bg-slate-950 border border-white/10 rounded-xl py-3 pl-8 pr-4 text-lg font-bold text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-8 pr-4 text-lg font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 placeholder="0.00"
                             />
                         </div>
@@ -62,7 +62,7 @@ const ServicePriceModal: React.FC<ServicePriceModalProps> = ({ isOpen, product, 
                         <Button
                             variant="ghost"
                             onClick={() => { setCustomPrice(''); onClose(); }}
-                            className="flex-1 border border-white/5 hover:bg-white/5"
+                            className="flex-1 border border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                         >
                             Cancelar
                         </Button>

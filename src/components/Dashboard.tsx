@@ -43,24 +43,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     ];
 
     return (
-        <div className="min-h-screen bg-slate-950 p-6 text-slate-100 font-sans">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 text-slate-900 dark:text-slate-100 font-sans">
 
             {/* Header */}
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-slate-800/50 pb-6">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-slate-200 dark:border-slate-800/50 pb-6">
                 <div>
                     <h1 className="text-3xl font-bold flex items-center gap-2">
                         <Rocket className="w-8 h-8 text-blue-500" />
                         Centro de Mando
                     </h1>
-                    <p className="text-slate-400 mt-1">
-                        Hola, <span className="text-blue-400 font-semibold">{user?.name || 'Operador'}</span>. Sistema listo.
+                    <p className="text-slate-500 dark:text-slate-400 mt-1">
+                        Hola, <span className="text-blue-500 dark:text-blue-400 font-semibold">{user?.name || 'Operador'}</span>. Sistema listo.
                     </p>
                 </div>
-                <div className="text-right bg-slate-900/50 px-6 py-3 rounded-2xl border border-slate-800 shadow-lg backdrop-blur-sm">
-                    <div className="text-4xl font-mono font-bold text-slate-100 tracking-wider">
+                <div className="text-right bg-white/80 dark:bg-slate-900/50 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-lg backdrop-blur-sm">
+                    <div className="text-4xl font-mono font-bold text-slate-900 dark:text-slate-100 tracking-wider">
                         {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </div>
-                    <div className="text-xs text-slate-500 uppercase tracking-widest mt-1">
+                    <div className="text-xs text-slate-500 dark:text-slate-500 uppercase tracking-widest mt-1">
                         {time.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                     </div>
                 </div>
@@ -69,13 +69,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             {/* Top Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 {stats.map((stat, index) => (
-                    <div key={index} className={`bg-slate-900/40 backdrop-blur-md border ${stat.border} p-6 rounded-2xl shadow-lg relative overflow-hidden group`}>
+                    <div key={index} className={`bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border ${stat.border} p-6 rounded-2xl shadow-lg relative overflow-hidden group`}>
                         <div className="flex justify-between items-start relative z-10">
                             <div>
-                                <p className="text-sm text-slate-400 uppercase tracking-wider font-medium">{stat.label}</p>
-                                <h3 className="text-3xl font-bold mt-2 text-white">{stat.value}</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">{stat.label}</p>
+                                <h3 className="text-3xl font-bold mt-2 text-slate-900 dark:text-white">{stat.value}</h3>
                             </div>
-                            <div className={`p-3 rounded-xl bg-slate-800/50 ${stat.color}`}>
+                            <div className={`p-3 rounded-xl bg-slate-100 dark:bg-slate-800/50 ${stat.color}`}>
                                 <stat.icon className="w-6 h-6" />
                             </div>
                         </div>
@@ -89,13 +89,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
                 {/* Main Content Area (Left - 2cols) - Time Monitor */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 p-6 rounded-2xl shadow-lg">
+                    <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-lg">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-semibold flex items-center gap-2">
-                                <Clock className="w-5 h-5 text-blue-400" />
+                                <Clock className="w-5 h-5 text-blue-500 max-dark:text-blue-400" />
                                 Monitor de Tiempo Activo
                             </h3>
-                            <span className="text-xs bg-slate-800 text-slate-400 px-2 py-1 rounded border border-slate-700">Top 5 más antiguos</span>
+                            <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">Top 5 más antiguos</span>
                         </div>
 
                         <div className="space-y-4">
@@ -106,17 +106,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                                 return (
                                     <div key={child.id} className="group">
                                         <div className="flex justify-between items-end mb-1 text-sm">
-                                            <span className="font-medium text-slate-200">{child.name}</span>
+                                            <span className="font-medium text-slate-800 dark:text-slate-200">{child.name}</span>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-slate-400">{child.timeElapsed} transcurrido</span>
-                                                <span className={`font-bold ${isWarning ? 'text-red-400 animate-pulse' : 'text-slate-500'}`}>
+                                                <span className="text-slate-500 dark:text-slate-400">{child.timeElapsed} transcurrido</span>
+                                                <span className={`font-bold ${isWarning ? 'text-red-500 animate-pulse' : 'text-slate-500 dark:text-slate-400'}`}>
                                                     {isWarning && <AlertTriangle className="w-3 h-3 inline mr-1" />}
                                                     {child.timeLeft} min restantes
                                                 </span>
                                             </div>
                                         </div>
 
-                                        <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                                        <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                                             <div
                                                 className={`h-full rounded-full transition-all duration-1000 ${isWarning ? 'bg-red-500' : 'bg-green-500'}`}
                                                 style={{ width: `${Math.max(5, progress)}%` }} // Ensure at least a little bit is visible
@@ -131,7 +131,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
                 {/* Sidebar (Right - 1col) - Quick Actions */}
                 <div className="space-y-6">
-                    <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 p-6 rounded-2xl shadow-lg h-full">
+                    <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-lg h-full">
                         <h3 className="text-xl font-semibold flex items-center gap-2 mb-6">
                             Acciones Rápidas
                         </h3>
@@ -145,8 +145,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                                     <UserPlus className="w-6 h-6 text-white" />
                                 </div>
                                 <div className="text-left">
-                                    <span className="block font-bold text-blue-100">Nuevo Check-in</span>
-                                    <span className="text-xs text-blue-300/70">Registrar entrada de niño</span>
+                                    <span className="block font-bold text-blue-900 dark:text-blue-100">Nuevo Check-in</span>
+                                    <span className="text-xs text-blue-700 dark:text-blue-300/70">Registrar entrada de niño</span>
                                 </div>
                             </button>
 
@@ -155,8 +155,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                                     <LogOut className="w-6 h-6 text-white" />
                                 </div>
                                 <div className="text-left">
-                                    <span className="block font-bold text-red-100">Registrar Salida</span>
-                                    <span className="text-xs text-red-300/70">Finalizar sesión de juego</span>
+                                    <span className="block font-bold text-red-900 dark:text-red-100">Registrar Salida</span>
+                                    <span className="text-xs text-red-700 dark:text-red-300/70">Finalizar sesión de juego</span>
                                 </div>
                             </button>
 
@@ -168,8 +168,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                                     <ShoppingBag className="w-6 h-6 text-white" />
                                 </div>
                                 <div className="text-left">
-                                    <span className="block font-bold text-yellow-100">Venta Rápida</span>
-                                    <span className="text-xs text-yellow-300/70">Snacks, calcetines, bebidas...</span>
+                                    <span className="block font-bold text-yellow-900 dark:text-yellow-100">Venta Rápida</span>
+                                    <span className="text-xs text-yellow-700 dark:text-yellow-300/70">Snacks, calcetines, bebidas...</span>
                                 </div>
                             </button>
                         </div>

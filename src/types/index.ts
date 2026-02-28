@@ -11,6 +11,7 @@ export interface Parent {
     name: string;
     email?: string;
     phone?: string;
+    card_id?: string;
     face_photo?: string;
     loyalty_points?: number;
     total_visits?: number;
@@ -30,8 +31,8 @@ export interface Child {
 
 export interface Session {
     id: string;
-    parent: string; // foreign key to parent
-    child: string[]; // array of foreign keys to children
+    parent?: string; // foreign key to parent, optional for express sales
+    child?: string[]; // array of foreign keys to children, optional for express sales
     sale?: string; // foreign key to sale
     status: 'active' | 'finished' | 'overtime';
     operator?: string; // foreign key to users
@@ -48,7 +49,10 @@ export interface Session {
 export interface Product {
     id: string;
     name: string;
-    type?: 'physical' | 'service_fixed' | 'service_open';
+    category?: 'service' | 'snack' | 'socks';
+    duration_min?: number;
+    size?: 'M' | 'G' | 'L';
+    subcategory?: 'Bebidas' | 'Snacks';
     price: number;
     cost?: number;
     stock?: number;
@@ -85,6 +89,17 @@ export interface SaleItem {
     product?: string; // foreign key to products
     quantity?: number;
     unit_price: number;
+    created?: string;
+    updated?: string;
+}
+
+export interface Asset {
+    id: string;
+    name: string;
+    type?: string;
+    status: 'available' | 'in_use' | 'maintenance';
+    workstation?: string;
+    last_report?: string;
     created?: string;
     updated?: string;
 }

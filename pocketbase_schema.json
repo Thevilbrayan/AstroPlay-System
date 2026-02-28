@@ -788,6 +788,124 @@
         "system": true
     },
     {
+        "id": "pbc_1321337024",
+        "listRule": null,
+        "viewRule": null,
+        "createRule": null,
+        "updateRule": null,
+        "deleteRule": null,
+        "name": "assets",
+        "type": "base",
+        "fields": [
+            {
+                "autogeneratePattern": "[a-z0-9]{15}",
+                "hidden": false,
+                "id": "text3208210256",
+                "max": 15,
+                "min": 15,
+                "name": "id",
+                "pattern": "^[a-z0-9]+$",
+                "presentable": false,
+                "primaryKey": true,
+                "required": true,
+                "system": true,
+                "type": "text"
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text1579384326",
+                "max": 0,
+                "min": 0,
+                "name": "name",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
+                "system": false,
+                "type": "text"
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text2363381545",
+                "max": 0,
+                "min": 0,
+                "name": "type",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
+                "system": false,
+                "type": "text"
+            },
+            {
+                "hidden": false,
+                "id": "select2063623452",
+                "maxSelect": 1,
+                "name": "status",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "select",
+                "values": [
+                    "available",
+                    "in_use",
+                    "maintenance"
+                ]
+            },
+            {
+                "cascadeDelete": false,
+                "collectionId": "pbc_1023605348",
+                "hidden": false,
+                "id": "relation3455310096",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "workstation",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "relation"
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text1311307102",
+                "max": 0,
+                "min": 0,
+                "name": "last_report",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
+                "system": false,
+                "type": "text"
+            },
+            {
+                "hidden": false,
+                "id": "autodate2990389176",
+                "name": "created",
+                "onCreate": true,
+                "onUpdate": false,
+                "presentable": false,
+                "system": false,
+                "type": "autodate"
+            },
+            {
+                "hidden": false,
+                "id": "autodate3332085495",
+                "name": "updated",
+                "onCreate": true,
+                "onUpdate": true,
+                "presentable": false,
+                "system": false,
+                "type": "autodate"
+            }
+        ],
+        "indexes": [],
+        "system": false
+    },
+    {
         "id": "pbc_3789154723",
         "listRule": "@request.auth.id != \"\"",
         "viewRule": "@request.auth.id != \"\"",
@@ -1054,15 +1172,15 @@
                 "hidden": false,
                 "id": "select2363381545",
                 "maxSelect": 1,
-                "name": "type",
+                "name": "category",
                 "presentable": false,
                 "required": false,
                 "system": false,
                 "type": "select",
                 "values": [
-                    "physical",
-                    "service_fixed",
-                    "service_open"
+                    "snack",
+                    "service",
+                    "socks"
                 ]
             },
             {
@@ -1133,12 +1251,44 @@
             },
             {
                 "hidden": false,
-                "id": "bool2740443028",
-                "name": "is_for_sale",
+                "id": "number1116771874",
+                "max": null,
+                "min": null,
+                "name": "duration_min",
+                "onlyInt": false,
                 "presentable": false,
                 "required": false,
                 "system": false,
-                "type": "bool"
+                "type": "number"
+            },
+            {
+                "hidden": false,
+                "id": "select4156564586",
+                "maxSelect": 1,
+                "name": "size",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "select",
+                "values": [
+                    "M",
+                    "G",
+                    "L"
+                ]
+            },
+            {
+                "hidden": false,
+                "id": "select232563784",
+                "maxSelect": 1,
+                "name": "subcategory",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "select",
+                "values": [
+                    "Bebidas",
+                    "Snacks"
+                ]
             },
             {
                 "hidden": false,
@@ -1454,6 +1604,41 @@
                 "type": "relation"
             },
             {
+                "cascadeDelete": false,
+                "collectionId": "_pb_users_auth_",
+                "hidden": false,
+                "id": "relation3618023297",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "operator",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "relation"
+            },
+            {
+                "hidden": false,
+                "id": "date1345189255",
+                "max": "",
+                "min": "",
+                "name": "start_time",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
+            },
+            {
+                "hidden": false,
+                "id": "date1096160257",
+                "max": "",
+                "min": "",
+                "name": "end_time",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
+            },
+            {
                 "hidden": false,
                 "id": "autodate2990389176",
                 "name": "created",
@@ -1472,26 +1657,6 @@
                 "presentable": false,
                 "system": false,
                 "type": "autodate"
-            },
-            {
-                "hidden": false,
-                "id": "autodate2420534521",
-                "name": "start_time",
-                "onCreate": true,
-                "onUpdate": false,
-                "presentable": false,
-                "system": false,
-                "type": "autodate"
-            },
-            {
-                "hidden": false,
-                "id": "autodate3961577812",
-                "name": "end_time",
-                "onCreate": true,
-                "onUpdate": false,
-                "presentable": false,
-                "system": false,
-                "type": "autodate"
             }
         ],
         "indexes": [],
@@ -1499,12 +1664,12 @@
     },
     {
         "id": "pbc_1023605348",
-        "listRule": null,
-        "viewRule": null,
-        "createRule": null,
-        "updateRule": null,
-        "deleteRule": null,
-        "name": "workstation",
+        "listRule": "@request.auth.id != \"\"",
+        "viewRule": "@request.auth.id != \"\"",
+        "createRule": "@request.auth.role = 'admin'",
+        "updateRule": "@request.auth.role = 'admin'",
+        "deleteRule": "@request.auth.role = 'admin'",
+        "name": "workstations",
         "type": "base",
         "fields": [
             {
@@ -1545,8 +1710,9 @@
                 "system": false,
                 "type": "select",
                 "values": [
-                    "a",
-                    "b"
+                    "FULL_SERVICE",
+                    "SNACK_ONLY",
+                    "TIME_ONLY"
                 ]
             },
             {

@@ -124,46 +124,46 @@ const DatePicker: React.FC<DatePickerProps> = ({
 
     return (
         <div className={cn('w-full', className)}>
-            {label && <label className="text-sm font-medium text-slate-400 mb-2 block">{label}</label>}
+            {label && <label className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2 block">{label}</label>}
 
             <button
                 ref={triggerRef}
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    'flex items-center gap-3 w-full h-11 rounded-xl border bg-slate-800 px-4 text-sm transition-all duration-200 hover:border-white/20 text-left',
-                    error ? 'border-red-500/50' : 'border-white/10',
+                    'flex items-center gap-3 w-full h-11 rounded-xl border bg-white dark:bg-slate-800 px-4 text-sm transition-all duration-200 hover:border-slate-300 dark:hover:border-white/20 text-left',
+                    error ? 'border-red-300 dark:border-red-500/50' : 'border-slate-200 dark:border-white/10',
                     isOpen && 'ring-2 ring-blue-500/50'
                 )}
             >
-                <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
-                <span className={value ? 'text-slate-200' : 'text-slate-500'}>
+                <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
+                <span className={value ? 'text-slate-900 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'}>
                     {value ? formatDisplay(value) : placeholder}
                 </span>
             </button>
 
-            {error && <p className="text-xs text-red-400 font-medium mt-1">{error}</p>}
+            {error && <p className="text-xs text-red-600 dark:text-red-400 font-medium mt-1">{error}</p>}
 
             {isOpen && createPortal(
                 <div
                     ref={dropdownRef}
-                    className="fixed z-[9999] bg-slate-900 border border-white/10 rounded-xl shadow-2xl shadow-black/60 p-3 w-[290px]"
+                    className="fixed z-[9999] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl shadow-2xl shadow-black/10 dark:shadow-black/60 p-3 w-[290px]"
                     style={{ top: dropdownPos.top, left: dropdownPos.left }}
                 >
                     {/* Header with clickable month/year → opens year-month picker */}
                     <div className="flex items-center justify-between mb-3">
-                        <button type="button" onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors">
+                        <button type="button" onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors">
                             <ChevronLeft className="w-4 h-4" />
                         </button>
                         <button
                             type="button"
                             onClick={() => setShowYearMonth(!showYearMonth)}
-                            className="flex items-center gap-1 text-sm font-semibold text-slate-200 hover:text-blue-400 transition-colors px-2 py-1 rounded-lg hover:bg-white/5"
+                            className="flex items-center gap-1 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5"
                         >
                             {MONTHS[month]} {year}
                             <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', showYearMonth && 'rotate-180')} />
                         </button>
-                        <button type="button" onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors">
+                        <button type="button" onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors">
                             <ChevronRight className="w-4 h-4" />
                         </button>
                     </div>
@@ -183,7 +183,7 @@ const DatePicker: React.FC<DatePickerProps> = ({
                                             'h-7 rounded-md text-xs font-medium transition-all',
                                             y === year
                                                 ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
-                                                : 'text-slate-400 hover:bg-white/10 hover:text-white'
+                                                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
                                         )}
                                     >
                                         {y}
@@ -203,7 +203,7 @@ const DatePicker: React.FC<DatePickerProps> = ({
                                             'h-7 rounded-md text-xs font-medium transition-all',
                                             i === month
                                                 ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
-                                                : 'text-slate-400 hover:bg-white/10 hover:text-white'
+                                                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
                                         )}
                                     >
                                         {m}
@@ -232,8 +232,8 @@ const DatePicker: React.FC<DatePickerProps> = ({
                                                     isSelected(day)
                                                         ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
                                                         : isDisabled(day)
-                                                            ? 'text-slate-700 cursor-not-allowed'
-                                                            : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                                                            ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed'
+                                                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
                                                 )}
                                             >
                                                 {day}

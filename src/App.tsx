@@ -6,15 +6,18 @@ import { Login } from './components/Login';
 import { WorkstationSetup } from './components/WorkstationSetup';
 import { SettingsView } from './components/admin/SettingsView';
 import { StationManager } from './components/admin/StationManager';
+import { LiveMonitor } from './components/dashboard/LiveMonitor';
 import TimeDashboard from './components/dashboard/TimeDashboard';
 import SecurityCheckIn from './components/SecurityCheckIn';
 import InventoryPOS from './components/inventory/InventoryPOS';
+import { HardwareConfig } from './components/admin/HardwareConfig';
 import MainLayout from './components/layout/MainLayout';
+import ReportsView from './components/dashboard/ReportsView';
 
 function App() {
-  const { isValid } = useAuthStore();
+  const { user, isValid } = useAuthStore();
   const { workstationId, clearWorkstation } = useWorkstationStore();
-  const [currentView, setCurrentView] = useState<'dashboard' | 'checkin' | 'inventory' | 'settings' | 'stations'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'checkin' | 'pos' | 'inventory' | 'settings' | 'stations' | 'hardware' | 'reports'>('dashboard');
 
   // Workstation Handshake
   useEffect(() => {
@@ -51,17 +54,24 @@ function App() {
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':
-        return <TimeDashboard />;
+        // Optional: Render LiveMonitor for Admins, TimeDashboard for Ops
+        return user?.role === 'admin' ? <LiveMonitor /> : <TimeDashboard />;
+      case 'reports':
+        return <ReportsView />;
       case 'checkin':
         return <SecurityCheckIn onNavigate={setCurrentView as any} />;
+      case 'pos':
+        return <InventoryPOS view="pos" onNavigate={(v) => setCurrentView(v as any)} />;
       case 'inventory':
-        return <InventoryPOS onNavigate={(v) => setCurrentView(v as any)} />;
+        return <InventoryPOS view="inventory" onNavigate={(v) => setCurrentView(v as any)} />;
       case 'settings':
         return <SettingsView />;
       case 'stations':
         return <StationManager />;
+      case 'hardware':
+        return <HardwareConfig />;
       default:
-        return <TimeDashboard />;
+        return user?.role === 'admin' ? <LiveMonitor /> : <TimeDashboard />;
     }
   };
 

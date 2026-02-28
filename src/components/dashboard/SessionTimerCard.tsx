@@ -71,17 +71,17 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
 
     let stateTheme = {
         glow: "shadow-[0_0_30px_rgba(59,130,246,0.15)]",
-        border: "border-white/10",
-        textMain: "text-white",
-        textNeon: "text-cyan-400",
-        circleTrack: "stroke-slate-800/80",
+        border: "border-slate-200 dark:border-white/10",
+        textMain: "text-slate-900 dark:text-white",
+        textNeon: "text-blue-600 dark:text-cyan-400",
+        circleTrack: "stroke-slate-200 dark:stroke-slate-800/80",
         circleFill: "stroke-blue-500",
-        circleGlow: "drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]",
-        handleColor: "bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,1)]",
-        buttonHover: "hover:border-blue-400 hover:text-blue-400 hover:shadow-[0_0_10px_rgba(96,165,250,0.5)]",
+        circleGlow: "drop-shadow-[0_0_8px_rgba(59,130,246,0.2)] dark:drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]",
+        handleColor: "bg-blue-400 dark:bg-cyan-300 shadow-[0_0_10px_rgba(59,130,246,0.4)] dark:shadow-[0_0_10px_rgba(103,232,249,1)]",
+        buttonHover: "hover:border-blue-300 dark:hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 hover:shadow-[0_0_10px_rgba(96,165,250,0.5)]",
         pulse: "",
-        badgeBg: "bg-slate-900/80",
-        badgeText: "text-slate-300",
+        badgeBg: "bg-slate-100 dark:bg-slate-900/80",
+        badgeText: "text-slate-600 dark:text-slate-300",
         avatarRing: "ring-blue-500/30"
     };
 
@@ -97,8 +97,8 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
             handleColor: "bg-red-300 shadow-[0_0_10px_rgba(252,165,165,1)]",
             buttonHover: "hover:border-red-400 hover:text-red-400 hover:shadow-[0_0_10px_rgba(248,113,113,0.5)]",
             pulse: "animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]",
-            badgeBg: "bg-red-500/20",
-            badgeText: "text-red-300",
+            badgeBg: "bg-red-50 dark:bg-red-500/20",
+            badgeText: "text-red-600 dark:text-red-300",
             avatarRing: "ring-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.5)]"
         };
     } else if (isWarning) {
@@ -113,8 +113,8 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
             handleColor: "bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,1)]",
             buttonHover: "hover:border-orange-400 hover:text-orange-400 hover:shadow-[0_0_10px_rgba(251,146,60,0.5)]",
             pulse: "",
-            badgeBg: "bg-orange-500/20",
-            badgeText: "text-orange-300",
+            badgeBg: "bg-orange-50 dark:bg-orange-500/20",
+            badgeText: "text-orange-600 dark:text-orange-300",
             avatarRing: "ring-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.3)]"
         };
     }
@@ -125,7 +125,7 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
     const circleDashoffset = circleCircumference * (1 - progressRemaining);
 
     return (
-        <div className={`w-full max-w-[320px] min-w-[260px] bg-slate-950/70 backdrop-blur-xl border ${stateTheme.border} rounded-[32px] p-6 shadow-2xl ${stateTheme.glow} ${stateTheme.pulse} transition-all duration-500 relative flex flex-col font-sans`}>
+        <div className={`w-full max-w-[320px] min-w-[260px] bg-white/80 dark:bg-slate-950/70 backdrop-blur-xl border ${stateTheme.border} rounded-[32px] p-6 shadow-2xl ${stateTheme.glow} ${stateTheme.pulse} transition-all duration-500 relative flex flex-col font-sans`}>
 
             {/* Top Right Tag for Exceeded */}
             {isExceeded && (
@@ -137,12 +137,12 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
             {/* Header: Child Info & Status */}
             <div className="flex justify-between items-start mb-6 w-full">
                 <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center ring-2 ${stateTheme.avatarRing} shrink-0 overflow-hidden transition-all duration-300`}>
-                        <User className="w-6 h-6 text-slate-400" />
+                    <div className={`w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center ring-2 ${stateTheme.avatarRing} shrink-0 overflow-hidden transition-all duration-300`}>
+                        <User className="w-6 h-6 text-slate-500 dark:text-slate-400" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-slate-100 text-base leading-tight truncate max-w-[140px]">{child.name}</h3>
-                        <p className="text-xs text-slate-400">{calcAge(child.birth_date)} años</p>
+                        <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base leading-tight truncate max-w-[140px]">{child.name}</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{calcAge(child.birth_date)} años</p>
                     </div>
                 </div>
             </div>
@@ -157,7 +157,7 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
                     Pulsera
                 </div>
                 {session.is_gokart && (
-                    <div className="px-2 py-1 bg-purple-500/20 border border-purple-500/30 rounded-full text-[10px] font-bold text-purple-300 shadow-inner tracking-wider uppercase">
+                    <div className="px-2 py-1 bg-purple-100 dark:bg-purple-500/20 border border-purple-200 dark:border-purple-500/30 rounded-full text-[10px] font-bold text-purple-700 dark:text-purple-300 shadow-inner tracking-wider uppercase">
                         Go-Karts
                     </div>
                 )}
@@ -195,7 +195,7 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
                         <span className={`text-[36px] font-mono font-bold leading-none tracking-tight ${stateTheme.textMain}`}>
                             {formatTimeLeft(timeLeft)}
                         </span>
-                        <span className="text-xs text-slate-400 font-medium mt-1">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
                             {totalMinutes} min
                         </span>
                     </div>
@@ -203,10 +203,10 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
             </div>
 
             {/* Footer Extended Controls */}
-            <div className="grid grid-cols-4 gap-2 px-1">
+            <div className="grid grid-cols-4 gap-2 px-1 text-slate-600 dark:text-slate-300">
                 <button
                     onClick={() => { setIsPaused(!isPaused); onPlayPause?.(); }}
-                    className={`w-12 h-12 rounded-full bg-slate-900 border border-transparent mx-auto flex items-center justify-center transition-all ${stateTheme.buttonHover}`}
+                    className={`w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-900 border border-transparent mx-auto flex items-center justify-center transition-all ${stateTheme.buttonHover}`}
                     title={isPaused ? "Reanudar" : "Pausar"}
                 >
                     {isPaused ? <Play className="w-5 h-5" fill="currentColor" /> : <Pause className="w-5 h-5" fill="currentColor" />}
@@ -214,7 +214,7 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
 
                 <button
                     onClick={onExtend}
-                    className={`w-12 h-12 rounded-full bg-slate-900 border border-transparent mx-auto flex items-center justify-center transition-all ${stateTheme.buttonHover}`}
+                    className={`w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-900 border border-transparent mx-auto flex items-center justify-center transition-all ${stateTheme.buttonHover}`}
                     title="Añadir Tiempo"
                 >
                     <Plus className="w-5 h-5" />
@@ -222,7 +222,7 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
 
                 {parentPhone ? (
                     <button
-                        className={`w-12 h-12 rounded-full bg-slate-900 border border-transparent mx-auto flex items-center justify-center transition-all ${stateTheme.buttonHover}`}
+                        className={`w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-900 border border-transparent mx-auto flex items-center justify-center transition-all ${stateTheme.buttonHover}`}
                         title="Llamar Padre"
                     >
                         <Phone className="w-5 h-5" />
@@ -230,7 +230,7 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
                 ) : (
                     <button
                         onClick={() => { setAlertsMuted(!alertsMuted); onToggleAlert?.(); }}
-                        className={`w-12 h-12 rounded-full bg-slate-900 border border-transparent mx-auto flex items-center justify-center transition-all ${stateTheme.buttonHover} ${alertsMuted ? 'text-slate-600' : ''}`}
+                        className={`w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-900 border border-transparent mx-auto flex items-center justify-center transition-all ${stateTheme.buttonHover} ${alertsMuted ? 'text-slate-400 dark:text-slate-600' : ''}`}
                         title={alertsMuted ? "Activar Alertas" : "Silenciar Alertas"}
                     >
                         {alertsMuted ? <BellOff className="w-5 h-5" /> : <BellRing className="w-5 h-5" />}
@@ -239,7 +239,7 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
 
                 <button
                     onClick={onCheckout}
-                    className={`w-12 h-12 rounded-full bg-slate-900 border border-transparent mx-auto flex items-center justify-center transition-all hover:border-red-400 hover:text-red-400 hover:shadow-[0_0_10px_rgba(248,113,113,0.5)]`}
+                    className={`w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-900 border border-transparent mx-auto flex items-center justify-center transition-all hover:border-red-400 hover:text-red-500 dark:hover:text-red-400 hover:shadow-[0_0_10px_rgba(248,113,113,0.5)]`}
                     title="Registrar Salida"
                 >
                     <LogOut className="w-5 h-5 ml-0.5" />

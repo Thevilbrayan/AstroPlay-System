@@ -19,8 +19,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentView, onNaviga
 
     return (
         <div className={cn(
-            "fixed inset-0 bg-slate-950 font-sans text-slate-200 flex transition-colors duration-300",
-            theme === 'light' ? "light-theme" : ""
+            "fixed inset-0 bg-slate-50 text-slate-900 dark:bg-slate-950 font-sans dark:text-slate-200 flex transition-colors duration-300",
+            theme === 'dark' ? "dark" : ""
         )}>
 
             {/* Custom Title Bar */}
