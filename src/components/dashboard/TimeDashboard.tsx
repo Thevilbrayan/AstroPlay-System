@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Rocket, Filter, Clock, Users, ArrowUpRight, Flame, MapPin, Box, AlertTriangle, CheckCircle, Wrench } from 'lucide-react';
+import { Clock, Users, History, Box, AlertTriangle, CheckCircle, Wrench, Rocket } from 'lucide-react';
 import { Session, Child, Parent, Asset } from '../../types';
 import { pb } from '../../lib/pocketbase';
 import SessionTimerCard from './SessionTimerCard';
 import { useWorkstationStore } from '../../store/workstation.store';
-import Button from '../ui/Button';
+import { Button } from '../ui/button';
 
-// Mock Extended Types for Dashboard Rendering
 interface DashboardChild {
     child: Child;
     session: Session;
@@ -14,36 +13,45 @@ interface DashboardChild {
     timeLeft: number;
 }
 
-const TimeDashboard: React.FC = () => {
-    const { workstationId } = useWorkstationStore();
-    // Tab state
-    const [activeTab, setActiveTab] = useState<'monitor' | 'assets'>('monitor');
+interface RecentSession {
+    id: string;
+    childName: string;
+    parentName: string;
+    endTime: string;
+    duration: string;
+}
 
-    // We would normally fetch these from PocketBase real-time subscriptions, 
-    // but for the UI layout we'll build the view and fetch static data for now.
+interface TimeDashboardProps {
+    onNavigate?: (view: string) => void;
+}
+
+const TimeDashboard: React.FC<TimeDashboardProps> = ({ onNavigate }) => {
+    const { workstationId, workstationName } = useWorkstationStore();
+
     const [kids, setKids] = useState<DashboardChild[]>([]);
+    const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Assets state
     const [assets, setAssets] = useState<Asset[]>([]);
     const [loadingAssets, setLoadingAssets] = useState(false);
-
-    // Report Modal
     const [reportingAsset, setReportingAsset] = useState<Asset | null>(null);
     const [reportReason, setReportReason] = useState('');
-
-    const [filterBy, setFilterBy] = useState<'all' | 'ending' | 'recent' | 'gokarts'>('all');
+    const [activeTab, setActiveTab] = useState<'monitor' | 'assets'>('monitor');
 
     useEffect(() => {
         let isMounted = true;
 
         const loadActiveSessions = async () => {
             try {
-                // Fetch active sessions, expanding child array and parent record
+                // Build filter: active or paused sessions for this workstation
+                let filter = `status = 'active' || status = 'paused'`;
+
                 const records = await pb.collection('sessions').getFullList({
-                    filter: `status = 'active'`,
+                    filter,
                     expand: 'child,parent',
-                    sort: '-created'
+                    sort: '-created',
+                    requestKey: 'active-sessions'
                 });
 
                 const now = Date.now();
@@ -52,19 +60,25 @@ const TimeDashboard: React.FC = () => {
                 for (const record of records) {
                     const session = record as unknown as Session;
                     const parentData = record.expand?.parent as unknown as Parent;
-                    const childrenData = record.expand?.child as unknown as Child[] || [];
 
-                    // Calculate remaining time in seconds
+                    // Normalize child to array
+                    let rawChildren = record.expand?.child;
+                    let childrenData: Child[] = [];
+                    if (rawChildren) {
+                        childrenData = Array.isArray(rawChildren)
+                            ? (rawChildren as unknown as Child[])
+                            : [rawChildren as unknown as Child];
+                    }
+
                     const end = session.end_time ? new Date(session.end_time).getTime() : now + 3600000;
                     let timeLeftSeconds = Math.floor((end - now) / 1000);
 
                     if (!parentData || childrenData.length === 0) {
-                        // Anonymous Ticket (Express Mode)
                         activeKids.push({
                             child: {
                                 id: `anon-${session.id}`,
                                 name: `Ticket #${session.sale ? session.sale.slice(-4).toUpperCase() : session.id.slice(-4).toUpperCase()}`,
-                                birth_date: new Date().toISOString(), // dummy date so age calc gives 0 or near 0
+                                birth_date: new Date().toISOString(),
                                 parent: 'anon'
                             },
                             parent: {
@@ -77,7 +91,6 @@ const TimeDashboard: React.FC = () => {
                         continue;
                     }
 
-                    // Map each child to a separate card in the dashboard
                     for (const child of childrenData) {
                         activeKids.push({
                             child,
@@ -100,18 +113,64 @@ const TimeDashboard: React.FC = () => {
             }
         };
 
-        loadActiveSessions();
+        const loadRecentSessions = async () => {
+            try {
+                const records = await pb.collection('sessions').getList(1, 8, {
+                    filter: `status = 'finished'`,
+                    expand: 'child,parent',
+                    sort: '-updated',
+                    requestKey: 'recent-sessions'
+                });
 
-        // Polling every 30 seconds as a fallback, real-time subscription can be added later
-        const interval = setInterval(loadActiveSessions, 30000);
+                const recent: RecentSession[] = records.items.map(record => {
+                    const rawChild = record.expand?.child;
+                    const child = rawChild
+                        ? (Array.isArray(rawChild) ? rawChild[0] : rawChild)
+                        : null;
+                    const parent = record.expand?.parent as any;
+
+                    const start = new Date(record.start_time || record.created || '').getTime();
+                    const end = new Date(record.end_time || record.updated || '').getTime();
+                    const durationMin = Math.max(0, Math.round((end - start) / 60000));
+
+                    return {
+                        id: record.id,
+                        childName: child?.name || `Ticket #${record.id.slice(-4).toUpperCase()}`,
+                        parentName: parent?.name || 'Venta Directa',
+                        endTime: new Date(record.updated || '').toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+                        duration: `${durationMin} min`
+                    };
+                });
+
+                if (isMounted) setRecentSessions(recent);
+            } catch (error: any) {
+                if (!error.isAbort) console.error('Error fetching recent sessions:', error);
+            }
+        };
+
+        loadActiveSessions();
+        loadRecentSessions();
+
+        const interval = setInterval(() => {
+            loadActiveSessions();
+            loadRecentSessions();
+        }, 30000);
+
+        pb.collection('sessions').subscribe('*', function (_e) {
+            if (isMounted) {
+                loadActiveSessions();
+                loadRecentSessions();
+            }
+        });
 
         return () => {
             isMounted = false;
             clearInterval(interval);
+            pb.collection('sessions').unsubscribe('*');
         };
     }, []);
 
-    // Load Assets
+    // Assets
     const loadAssets = async () => {
         if (!workstationId) return;
         setLoadingAssets(true);
@@ -129,9 +188,7 @@ const TimeDashboard: React.FC = () => {
     };
 
     useEffect(() => {
-        if (activeTab === 'assets') {
-            loadAssets();
-        }
+        if (activeTab === 'assets') loadAssets();
     }, [activeTab, workstationId]);
 
     const handleReportFailure = async () => {
@@ -146,166 +203,148 @@ const TimeDashboard: React.FC = () => {
             await loadAssets();
         } catch (error) {
             console.error('Error reporting asset failure', error);
-            alert('No se pudo reportar la falla.');
         }
     };
 
     const handleMarkAvailable = async (asset: Asset) => {
         try {
-            await pb.collection('assets').update(asset.id, {
-                status: 'available',
-                last_report: '' // clear report when available again
-            });
+            await pb.collection('assets').update(asset.id, { status: 'available', last_report: '' });
             await loadAssets();
         } catch (error) {
             console.error('Error marking asset available', error);
         }
     };
 
-    // Filter and Sort Logic
+    // Sort: overtime first, then ascending time
     const displayedKids = useMemo(() => {
-        let filtered = [...kids];
+        return [...kids].sort((a, b) => a.timeLeft - b.timeLeft);
+    }, [kids]);
 
-        switch (filterBy) {
-            case 'ending':
-                // Sort ascending by time left
-                filtered.sort((a, b) => a.timeLeft - b.timeLeft);
-                break;
-            case 'recent':
-                // Sort descending by start_time
-                filtered.sort((a, b) => new Date(b.session.start_time || 0).getTime() - new Date(a.session.start_time || 0).getTime());
-                break;
-            case 'gokarts':
-                // Filter only is_gokart
-                filtered = filtered.filter(k => k.session.is_gokart);
-                break;
-            case 'all':
-            default:
-                // Default: Exceeded first, then ascending time left
-                filtered.sort((a, b) => a.timeLeft - b.timeLeft);
-                break;
-        }
-        return filtered;
-    }, [kids, filterBy]);
-
-    // Derived stats
-    const totalKids = kids.length;
-    const CAPACITY = 60; // Hardcoded park capacity for now
-    const fillPercentage = Math.round((totalKids / CAPACITY) * 100);
-    const capacityColor = fillPercentage > 90 ? 'bg-red-500' : fillPercentage > 75 ? 'bg-orange-500' : 'bg-emerald-500';
-    const activeAlerts = kids.filter(k => k.timeLeft < 10 * 60).length;
+    const totalActive = kids.length;
+    const warningCount = kids.filter(k => k.timeLeft < 10 * 60 && k.timeLeft > 0).length;
+    const overtimeCount = kids.filter(k => k.timeLeft <= 0).length;
 
     return (
-        <div className="flex flex-col h-full gap-6">
+        <div className="flex flex-col h-full gap-4 overflow-hidden">
 
-            {/* 1. Header & Capacity Bar */}
-            <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-2xl p-6 shadow-xl shrink-0">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-4">
-                    <div>
-                        <h1 className="text-2xl font-bold flex items-center gap-2 text-slate-900 dark:text-slate-100">
-                            <Rocket className="w-6 h-6 text-blue-600 dark:text-blue-500" />
-                            Time Dashboard <span className="text-blue-600 dark:text-blue-500 font-light">| Centro de Mando</span>
-                        </h1>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Control de tiempo e inventario en parque interactivo</p>
+            {/* ── COMPACT HEADER ── */}
+            <div className="shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-2xl px-5 py-4 shadow-lg">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.3)]">
+                        <Clock className="w-5 h-5 text-white" />
                     </div>
-
-                    {/* Capacity Header */}
-                    {activeTab === 'monitor' && (
-                        <div className="flex items-center gap-4 bg-slate-100 dark:bg-slate-950/50 p-3 rounded-xl border border-slate-200 dark:border-white/5 w-full md:w-[320px] shadow-inner">
-                            <div className={`w-12 h-12 rounded-full ${capacityColor}/10 flex items-center justify-center border ${capacityColor.replace('bg-', 'border-')}/30 shadow-[0_0_15px_rgba(0,0,0,0.05)] dark:shadow-[0_0_15px_rgba(0,0,0,0.2)] shrink-0`}>
-                                <Users className={`w-6 h-6 ${capacityColor.replace('bg-', 'text-')}`} />
-                            </div>
-                            <div className="flex-1">
-                                <div className="flex justify-between items-end mb-1">
-                                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Aforo Total</span>
-                                    <span className="text-sm font-black text-slate-900 dark:text-slate-100">{totalKids}/{CAPACITY} <span className="text-xs font-semibold text-slate-500">[{fillPercentage}%]</span></span>
-                                </div>
-                                <div className="h-1.5 w-full bg-slate-300 dark:bg-slate-800 rounded-full overflow-hidden">
-                                    <div className={`h-full rounded-full ${capacityColor} transition-all duration-1000`} style={{ width: `${Math.min(100, fillPercentage)}%` }} />
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    <div>
+                        <h1 className="text-lg font-black text-slate-900 dark:text-white leading-tight">
+                            Monitor de Sesiones
+                        </h1>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                            {workstationName || 'AstroPlay General'}
+                        </p>
+                    </div>
                 </div>
 
-                {/* Navigation Tabs */}
-                <div className="flex items-center gap-2 mt-4">
-                    <button
-                        onClick={() => setActiveTab('monitor')}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'monitor' ? 'bg-blue-100 dark:bg-blue-600 text-blue-700 dark:text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                    >
-                        <Clock className="w-4 h-4 inline-block mr-2" /> Monitor de Tiempos
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('assets')}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'assets' ? 'bg-blue-100 dark:bg-blue-600 text-blue-700 dark:text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                    >
-                        <Box className="w-4 h-4 inline-block mr-2" /> Estado de Activos
-                    </button>
+                {/* Stats Pills */}
+                <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-full">
+                        <Users className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        <span className="text-xs font-bold text-blue-700 dark:text-blue-300">{totalActive} activos</span>
+                    </div>
+                    {warningCount > 0 && (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-full animate-pulse">
+                            <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                            <span className="text-xs font-bold text-amber-700 dark:text-amber-300">{warningCount} por vencer</span>
+                        </div>
+                    )}
+                    {overtimeCount > 0 && (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-full animate-pulse">
+                            <AlertTriangle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+                            <span className="text-xs font-bold text-red-700 dark:text-red-300">{overtimeCount} excedidos</span>
+                        </div>
+                    )}
+
+                    {/* Tab Toggle */}
+                    <div className="ml-2 flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <button
+                            onClick={() => setActiveTab('monitor')}
+                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'monitor' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+                        >
+                            <Clock className="w-3.5 h-3.5 inline mr-1" />Sesiones
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('assets')}
+                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'assets' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+                        >
+                            <Box className="w-3.5 h-3.5 inline mr-1" />Activos
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {activeTab === 'monitor' ? (
-                <>
-                    {/* 2. Quick Filters */}
-                    <div className="flex items-center gap-3 shrink-0 overflow-x-auto pb-2 scrollbar-hide">
-                        <button
-                            onClick={() => setFilterBy('all')}
-                            className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all border ${filterBy === 'all' ? 'bg-blue-100 dark:bg-blue-600 text-blue-700 dark:text-white shadow-lg shadow-blue-500/25 border-blue-300 dark:border-blue-500' : 'bg-white/80 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                        >
-                            <Filter className="w-4 h-4" /> Todos Activos
-                        </button>
-                        <button
-                            onClick={() => setFilterBy('ending')}
-                            className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all border ${filterBy === 'ending' ? 'bg-orange-100 dark:bg-orange-600 text-orange-700 dark:text-white shadow-lg shadow-orange-500/25 border-orange-300 dark:border-orange-500' : 'bg-white/80 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                        >
-                            <Flame className="w-4 h-4" /> Por Agotarse ({activeAlerts})
-                        </button>
-                        <button
-                            onClick={() => setFilterBy('recent')}
-                            className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all border ${filterBy === 'recent' ? 'bg-emerald-100 dark:bg-emerald-600 text-emerald-700 dark:text-white shadow-lg shadow-emerald-500/25 border-emerald-300 dark:border-emerald-500' : 'bg-white/80 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                        >
-                            <ArrowUpRight className="w-4 h-4" /> Recién Ingresados
-                        </button>
-                        <button
-                            onClick={() => setFilterBy('gokarts')}
-                            className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all border ${filterBy === 'gokarts' ? 'bg-purple-100 dark:bg-purple-600 text-purple-700 dark:text-white shadow-lg shadow-purple-500/25 border-purple-300 dark:border-purple-500' : 'bg-white/80 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                        >
-                            <MapPin className="w-4 h-4" /> En Go-Karts
-                        </button>
-                    </div>
+                <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-hidden min-h-0">
 
-                    {/* 3. Dynamic Grid */}
-                    <div className="flex-1 overflow-y-auto pr-2 pb-6 min-h-0">
+                    {/* ── ACTIVE SESSIONS GRID ── */}
+                    <div className="flex-1 overflow-y-auto pr-1 min-h-0">
                         {loading ? (
                             <div className="flex items-center justify-center h-full">
                                 <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                             </div>
                         ) : displayedKids.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full bg-white/60 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl p-12">
-                                <Clock className="w-16 h-16 text-slate-300 dark:text-slate-700 mb-4" />
-                                <h3 className="text-xl font-bold text-slate-500 dark:text-slate-400">Sin niños en esta vista</h3>
-                                <p className="text-slate-400 dark:text-slate-500 mt-2">No se encontraron sesiones activas que coincidan con el filtro.</p>
+                            <div className="flex flex-col items-center justify-center h-full bg-slate-50/50 dark:bg-slate-900/20 border border-dashed border-slate-300 dark:border-slate-700/50 rounded-2xl p-12">
+                                <Clock className="w-14 h-14 text-slate-300 dark:text-slate-600 mb-3" />
+                                <h3 className="text-lg font-bold text-slate-500 dark:text-slate-400">Sin sesiones activas</h3>
+                                <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Registra un ingreso desde el Check-In para comenzar.</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 place-items-center">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 pb-4">
                                 {displayedKids.map(dk => (
-                                    <SessionTimerCard
-                                        key={dk.child.id}
-                                        child={dk.child}
-                                        session={dk.session}
-                                        parentPhone={dk.parent.phone}
-                                        onExtend={() => console.log('Extend', dk.child.id)}
-                                        onCheckout={() => console.log('Checkout', dk.child.id)}
-                                    />
+                                    <div key={dk.child.id} className="animate-in fade-in zoom-in duration-300 w-full">
+                                        <SessionTimerCard
+                                            child={dk.child}
+                                            session={dk.session}
+                                            parent={dk.parent}
+                                            onPauseSession={() => { }}
+                                            onAlertOvertime={() => { }}
+                                            onExtend={(minutes: number) => {
+                                                console.log(`Extend session ${dk.session.id} by ${minutes} min`);
+                                                onNavigate?.('pos');
+                                            }}
+                                        />
+                                    </div>
                                 ))}
                             </div>
                         )}
                     </div>
-                </>
+
+                    {/* ── RECENT HISTORY SIDEBAR ── */}
+                    <div className="w-full lg:w-[280px] shrink-0 bg-white/80 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-2xl p-4 shadow-lg flex flex-col overflow-hidden">
+                        <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+                            <History className="w-4 h-4 text-slate-500" />
+                            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Recientes</h3>
+                        </div>
+                        <div className="flex-1 overflow-y-auto space-y-1.5">
+                            {recentSessions.length === 0 ? (
+                                <p className="text-xs text-slate-400 text-center py-8">Sin historial reciente</p>
+                            ) : (
+                                recentSessions.map(rs => (
+                                    <div key={rs.id} className="flex items-center justify-between px-3 py-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate leading-tight">{rs.childName}</p>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{rs.parentName}</p>
+                                        </div>
+                                        <div className="text-right shrink-0 ml-2">
+                                            <p className="text-xs font-bold text-slate-600 dark:text-slate-300">{rs.endTime}</p>
+                                            <p className="text-[11px] text-slate-400">{rs.duration}</p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
             ) : (
                 /* ASSETS VIEW */
-                <div className="flex-1 overflow-y-auto pr-2 pb-6 min-h-0 bg-white/60 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl p-6">
+                <div className="flex-1 overflow-y-auto pr-2 pb-6 min-h-0 bg-slate-50/50 dark:bg-slate-900/20 border border-slate-200 dark:border-white/5 rounded-2xl p-6">
                     {loadingAssets ? (
                         <div className="flex items-center justify-center h-full">
                             <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -314,24 +353,24 @@ const TimeDashboard: React.FC = () => {
                         <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500">
                             <Box className="w-16 h-16 mb-4 opacity-30" />
                             <h3 className="text-xl font-bold text-slate-500 dark:text-slate-400">Sin activos asignados</h3>
-                            <p className="mt-2 text-sm text-center max-w-sm">Esta estación no tiene carritos ni equipamiento asignado actualmente. El Administrador puede asignarlos desde Configuración de Hardware.</p>
+                            <p className="mt-2 text-sm text-center max-w-sm">Esta estación no tiene equipamiento asignado.</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {assets.map(asset => (
-                                <div key={asset.id} className={`p-5 rounded-2xl border flex flex-col gap-4 shadow-xl transition-all ${asset.status === 'maintenance' ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-500/30 shadow-red-500/10 hover:border-red-500/50' :
-                                    asset.status === 'in_use' ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-500/30 shadow-blue-500/10 hover:border-blue-500/50' :
-                                        'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-500/30 shadow-emerald-500/10 hover:border-emerald-500/50'
+                                <div key={asset.id} className={`p-5 rounded-2xl border flex flex-col gap-4 shadow-xl transition-all ${asset.status === 'maintenance' ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-500/30 shadow-red-500/10' :
+                                    asset.status === 'in_use' ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-500/30 shadow-blue-500/10' :
+                                        'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-500/30 shadow-emerald-500/10'
                                     }`}>
                                     <div className="flex justify-between items-start">
                                         <div className="flex items-center gap-3">
                                             <div className="p-3 bg-white dark:bg-slate-900 rounded-xl shadow-inner border border-slate-200 dark:border-transparent">
-                                                {asset.status === 'maintenance' ? <Wrench className="w-6 h-6 text-red-500 dark:text-red-400" /> : <Rocket className={`w-6 h-6 ${asset.status === 'available' ? 'text-emerald-500 dark:text-emerald-400' : 'text-blue-500 dark:text-blue-400'}`} />}
+                                                {asset.status === 'maintenance' ? <Wrench className="w-6 h-6 text-red-500" /> : <Rocket className={`w-6 h-6 ${asset.status === 'available' ? 'text-emerald-500' : 'text-blue-500'}`} />}
                                             </div>
                                             <div>
                                                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">{asset.name}</h3>
-                                                <span className={`text-xs font-semibold tracking-wider uppercase ${asset.status === 'maintenance' ? 'text-red-500 dark:text-red-400' :
-                                                    asset.status === 'in_use' ? 'text-blue-500 dark:text-blue-400' : 'text-emerald-500 dark:text-emerald-400'
+                                                <span className={`text-xs font-semibold tracking-wider uppercase ${asset.status === 'maintenance' ? 'text-red-500' :
+                                                    asset.status === 'in_use' ? 'text-blue-500' : 'text-emerald-500'
                                                     }`}>
                                                     {asset.status === 'maintenance' ? 'Mantenimiento' : asset.status === 'in_use' ? 'En Uso' : 'Disponible'}
                                                 </span>
@@ -341,7 +380,7 @@ const TimeDashboard: React.FC = () => {
 
                                     {asset.status === 'maintenance' && asset.last_report && (
                                         <div className="bg-red-100 dark:bg-red-500/10 p-3 rounded-lg border border-red-200 dark:border-red-500/20">
-                                            <strong className="text-xs text-red-600 dark:text-red-300 block mb-1">Último Reporte:</strong>
+                                            <strong className="text-xs text-red-600 dark:text-red-300 block mb-1">Reporte:</strong>
                                             <p className="text-sm text-red-800 dark:text-red-200">{asset.last_report}</p>
                                         </div>
                                     )}
@@ -350,14 +389,14 @@ const TimeDashboard: React.FC = () => {
                                         {asset.status === 'maintenance' ? (
                                             <button
                                                 onClick={() => handleMarkAvailable(asset)}
-                                                className="flex-1 py-2 bg-emerald-100 dark:bg-emerald-500/20 hover:bg-emerald-200 dark:hover:bg-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-semibold rounded-lg border border-emerald-300 dark:border-emerald-500/30 transition-colors flex items-center justify-center gap-2"
+                                                className="flex-1 py-2 bg-emerald-100 dark:bg-emerald-500/20 hover:bg-emerald-200 text-emerald-700 dark:text-emerald-300 font-semibold rounded-lg border border-emerald-300 dark:border-emerald-500/30 transition-colors flex items-center justify-center gap-2"
                                             >
                                                 <CheckCircle className="w-4 h-4" /> Marcar Disponible
                                             </button>
                                         ) : (
                                             <button
                                                 onClick={() => setReportingAsset(asset)}
-                                                className="flex-1 py-2 bg-red-100 dark:bg-red-500/20 hover:bg-red-200 dark:hover:bg-red-500/30 text-red-700 dark:text-red-300 font-semibold rounded-lg border border-red-300 dark:border-red-500/30 transition-colors flex items-center justify-center gap-2"
+                                                className="flex-1 py-2 bg-red-100 dark:bg-red-500/20 hover:bg-red-200 text-red-700 dark:text-red-300 font-semibold rounded-lg border border-red-300 dark:border-red-500/30 transition-colors flex items-center justify-center gap-2"
                                             >
                                                 <AlertTriangle className="w-4 h-4" /> Reportar Falla
                                             </button>
@@ -378,26 +417,25 @@ const TimeDashboard: React.FC = () => {
                             <AlertTriangle className="w-8 h-8" />
                             <h2 className="text-xl font-bold">Reportar Falla</h2>
                         </div>
-                        <p className="text-slate-600 dark:text-slate-300 mb-6">Estás a punto de enviar a mantenimiento el activo <strong className="text-slate-900 dark:text-white">{reportingAsset.name}</strong>. Esto causará que la capacidad disponible de la pista descuente 1 unidad inmediatamente.</p>
+                        <p className="text-slate-600 dark:text-slate-300 mb-6">Enviar a mantenimiento <strong className="text-slate-900 dark:text-white">{reportingAsset.name}</strong>.</p>
 
                         <div className="mb-6">
-                            <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Descripción del problema (Requerido)</label>
+                            <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Descripción del problema</label>
                             <textarea
                                 className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-red-500 rounded-xl p-3 text-slate-900 dark:text-white focus:outline-none min-h-[100px]"
-                                placeholder="Ej: Falla en el motor trasero, Llanta ponchada..."
+                                placeholder="Ej: Falla en el motor, Llanta ponchada..."
                                 value={reportReason}
                                 onChange={(e) => setReportReason(e.target.value)}
                             />
                         </div>
 
                         <div className="flex justify-end gap-3">
-                            <Button variant="ghost" onClick={() => { setReportingAsset(null); setReportReason(''); }}>Cancelar</Button>
-                            <Button variant="danger" disabled={!reportReason.trim()} onClick={handleReportFailure}>Reportar y Bloquear Activo</Button>
+                            <Button variant="outline" onClick={() => { setReportingAsset(null); setReportReason(''); }}>Cancelar</Button>
+                            <Button variant="destructive" disabled={!reportReason.trim()} onClick={handleReportFailure}>Reportar</Button>
                         </div>
                     </div>
                 </div>
             )}
-
         </div>
     );
 };

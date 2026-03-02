@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Edit3 } from 'lucide-react';
 import { Product } from '../../types';
-import Button from '../ui/Button';
+import { Button } from '../ui/button';
 
 interface ServicePriceModalProps {
     isOpen: boolean;
@@ -60,17 +60,17 @@ const ServicePriceModal: React.FC<ServicePriceModalProps> = ({ isOpen, product, 
 
                     <div className="flex gap-3 pt-2">
                         <Button
-                            variant="ghost"
+                            variant="outline"
                             onClick={() => { setCustomPrice(''); onClose(); }}
                             className="flex-1 border border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                         >
                             Cancelar
                         </Button>
                         <Button
-                            variant="primary"
+                            variant="default"
                             disabled={!customPrice || parseFloat(customPrice) <= 0}
                             onClick={handleConfirm}
-                            className="flex-1"
+                            className="flex-1 text-white bg-blue-600 hover:bg-blue-700"
                         >
                             Confirmar
                         </Button>

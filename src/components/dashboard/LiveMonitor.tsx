@@ -16,7 +16,11 @@ interface DashboardChild {
     timeLeft: number;
 }
 
-export const LiveMonitor: React.FC = () => {
+interface LiveMonitorProps {
+    onNavigate?: (view: string) => void;
+}
+
+export const LiveMonitor: React.FC<LiveMonitorProps> = ({ onNavigate }) => {
     const { workstationId } = useWorkstationStore();
     const [subView, setSubView] = useState<'playground' | 'gokarts' | 'train' | 'bi' | 'crm'>('playground');
 
@@ -34,7 +38,7 @@ export const LiveMonitor: React.FC = () => {
         try {
             // 1. Fetch Sessions & Relationships
             const sessions = await pb.collection('sessions').getFullList<Session>({
-                filter: 'status = "active"',
+                filter: 'status = "active" || status = "paused"',
                 sort: 'start_time'
             });
 
@@ -124,14 +128,21 @@ export const LiveMonitor: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 pb-20">
+                            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6 pb-20">
                                 {playgroundSessions.map(kid => (
-                                    <SessionTimerCard
-                                        key={`${kid.session.id}-${kid.child.id}`}
-                                        child={kid.child as any}
-                                        session={kid.session}
-                                        parentPhone={kid.parent.phone}
-                                    />
+                                    <div key={`${kid.session.id}-${kid.child.id}`} className="w-full">
+                                        <SessionTimerCard
+                                            child={kid.child as any}
+                                            session={kid.session}
+                                            parent={kid.parent as any}
+                                            onPauseSession={() => { }}
+                                            onAlertOvertime={() => { }}
+                                            onExtend={(minutes: number) => {
+                                                console.log(`Extend session by ${minutes} min`);
+                                                onNavigate?.('pos');
+                                            }}
+                                        />
+                                    </div>
                                 ))}
                                 {playgroundSessions.length === 0 && (
                                     <div className="col-span-full py-20 flex flex-col items-center justify-center opacity-30 border border-dashed border-slate-300 dark:border-slate-700 rounded-3xl">

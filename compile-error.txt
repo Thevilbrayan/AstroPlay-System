@@ -1,0 +1,1 @@
+src/components/dashboard/SessionTimerCard.tsx(2,36): error TS6133: 'BellRing' is declared but its value is never read.

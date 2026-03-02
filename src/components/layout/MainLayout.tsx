@@ -3,8 +3,6 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import { TitleBar } from './TitleBar';
 import { useUIStore } from '../../store/ui.store';
-import { useThemeStore } from '../../store/theme.store';
-import { cn } from '../../lib/utils';
 
 interface MainLayoutProps {
     children: React.ReactNode;
@@ -15,13 +13,9 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children, currentView, onNavigate }) => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
     const { isFullscreen } = useUIStore();
-    const { theme } = useThemeStore();
 
     return (
-        <div className={cn(
-            "fixed inset-0 bg-slate-50 text-slate-900 dark:bg-slate-950 font-sans dark:text-slate-200 flex transition-colors duration-300",
-            theme === 'dark' ? "dark" : ""
-        )}>
+        <div className="fixed inset-0 bg-slate-50 text-slate-900 dark:bg-slate-950 font-sans dark:text-slate-200 flex transition-colors duration-300">
 
             {/* Custom Title Bar */}
             <TitleBar />

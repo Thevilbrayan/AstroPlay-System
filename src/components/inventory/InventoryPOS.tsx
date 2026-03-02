@@ -34,7 +34,7 @@ const InventoryPOS: React.FC<InventoryPOSProps> = ({ view, onNavigate }) => {
             });
             const productsWithImages = records.items.map(record => ({
                 ...record,
-                imagen: record.imagen ? pb.files.getUrl(record, record.imagen) : ''
+                imagen: record.imagen ? pb.files.getURL(record, record.imagen) : ''
             }));
             setProducts(productsWithImages);
         } catch (error) {

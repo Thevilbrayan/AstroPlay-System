@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, X, Save, RefreshCw, AlertTriangle, Package, Zap, Image as ImageIcon, Coffee } from 'lucide-react';
 import { Product } from '../../types';
-import Button from '../ui/Button';
-import Input from '../ui/Input';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { pb } from '../../lib/pocketbase';
 import { ClientResponseError } from 'pocketbase';
 
@@ -178,23 +179,29 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, ed
                                 ))}
                             </div>
 
-                            <Input
-                                label="Nombre del Producto"
-                                value={name}
-                                onChange={e => setName(e.target.value)}
-                                placeholder="Ej. Day Pass"
-                            />
+                            <div className="grid grid-cols-2 gap-4">
+                                <Label htmlFor="product-name" className="sr-only">Nombre del Producto</Label>
+                                <Input
+                                    id="product-name"
+                                    value={name}
+                                    onChange={e => setName(e.target.value)}
+                                    placeholder="Ej. Day Pass"
+                                />
+                            </div>
 
                             {/* Dynamic Fields */}
                             {category === 'service' && (
                                 <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 px-1">
-                                    <Input
-                                        label="Duración (minutos)"
-                                        type="number"
-                                        value={durationMin}
-                                        onChange={e => setDurationMin(e.target.value)}
-                                        placeholder="60"
-                                    />
+                                    <div className="flex flex-col gap-1.5">
+                                        <Label htmlFor="duration-min">Duración (minutos)</Label>
+                                        <Input
+                                            id="duration-min"
+                                            type="number"
+                                            value={durationMin}
+                                            onChange={e => setDurationMin(e.target.value)}
+                                            placeholder="60"
+                                        />
+                                    </div>
                                     <span className="self-end pb-[11px] text-xs text-slate-500 dark:text-slate-400 italic">Dejar como 0 u 800 si es abierto</span>
                                 </div>
                             )}
@@ -236,41 +243,53 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, ed
                             )}
 
                             <div className="grid grid-cols-2 gap-4">
-                                <Input
-                                    label="Precio ($)"
-                                    type="number"
-                                    value={price}
-                                    onChange={e => setPrice(e.target.value)}
-                                    placeholder="0.00"
-                                    disabled={false}
-                                />
-                                <Input
-                                    label="Costo ($)"
-                                    type="number"
-                                    value={cost}
-                                    onChange={e => setCost(e.target.value)}
-                                    placeholder="Opcional"
-                                />
+                                <div className="flex flex-col gap-1.5">
+                                    <Label htmlFor="price-val">Precio ($)</Label>
+                                    <Input
+                                        id="price-val"
+                                        type="number"
+                                        value={price}
+                                        onChange={e => setPrice(e.target.value)}
+                                        placeholder="0.00"
+                                        disabled={false}
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <Label htmlFor="cost-val">Costo ($)</Label>
+                                    <Input
+                                        id="cost-val"
+                                        type="number"
+                                        value={cost}
+                                        onChange={e => setCost(e.target.value)}
+                                        placeholder="Opcional"
+                                    />
+                                </div>
                             </div>
 
                             {(category === 'snack' || category === 'socks') && (
                                 <div className="grid grid-cols-2 gap-4">
-                                    <Input
-                                        label="Stock Actual"
-                                        type="number"
-                                        value={stock}
-                                        onChange={e => setStock(e.target.value)}
-                                        placeholder="0"
-                                    />
-                                    {category === 'snack' && (
+                                    <div className="flex flex-col gap-1.5">
+                                        <Label htmlFor="stock">Stock Actual</Label>
                                         <Input
-                                            label="Stock Mínimo"
+                                            id="stock"
                                             type="number"
-                                            value={minStock}
-                                            onChange={e => setMinStock(e.target.value)}
-                                            placeholder="5"
-                                            className="border-orange-300 dark:border-orange-500/30 focus-visible:ring-orange-500/20 text-orange-600 dark:text-orange-200"
+                                            value={stock}
+                                            onChange={e => setStock(e.target.value)}
+                                            placeholder="0"
                                         />
+                                    </div>
+                                    {category === 'snack' && (
+                                        <div className="flex flex-col gap-1.5">
+                                            <Label htmlFor="min-stock">Stock Mínimo</Label>
+                                            <Input
+                                                id="min-stock"
+                                                type="number"
+                                                value={minStock}
+                                                onChange={e => setMinStock(e.target.value)}
+                                                placeholder="5"
+                                                className="border-orange-300 dark:border-orange-500/30 focus-visible:ring-orange-500/20 text-orange-600 dark:text-orange-200"
+                                            />
+                                        </div>
                                     )}
                                 </div>
                             )}
@@ -324,16 +343,15 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, ed
                         <span>Limpiar</span>
                     </button>
                     <div className="flex items-center gap-3">
-                        <Button variant="ghost" onClick={onClose} className="border border-slate-200 dark:border-white/5 hover:bg-slate-200 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                        <Button variant="outline" onClick={onClose} className="border border-slate-200 dark:border-white/5 hover:bg-slate-200 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
                             Cancelar
                         </Button>
                         <Button
-                            variant="primary"
-                            isLoading={isLoadingSave}
+                            disabled={isLoadingSave}
                             onClick={handleSave}
                             className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none shadow-lg shadow-blue-500/20 text-white"
-                            icon={!isLoadingSave && <Save className="w-4 h-4" />}
                         >
+                            {isLoadingSave ? null : <Save className="w-4 h-4 mr-2" />}
                             Guardar Producto
                         </Button>
                     </div>

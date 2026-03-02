@@ -8,7 +8,9 @@ import {
     Monitor,
     Wrench,
     ShoppingBag,
-    LineChart
+    LineChart,
+    Wallet,
+    ShieldCheck
 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
 import { useWorkstationStore } from '../../store/workstation.store';
@@ -33,6 +35,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView = 'dashboard', onNavigate
         { id: 'checkin', label: 'Check-in', icon: Users },
         { id: 'pos', label: 'Punto de Venta', icon: ShoppingBag },
         { id: 'inventory', label: 'Inventario', icon: ShoppingCart },
+        { id: 'cashclose', label: 'Corte de Caja', icon: Wallet },
+        { id: 'audits', label: 'Auditoría Cajas', icon: ShieldCheck },
     ].filter(item => {
         // SNACK_ONLY workstations only need POS, plus Inventory if admin
         if (workstationType === 'SNACK_ONLY') {
@@ -45,8 +49,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView = 'dashboard', onNavigate
             return item.id === 'dashboard' || item.id === 'pos';
         }
 
-        // FULL_SERVICE: Show everything, but restrict inventory to admin
-        if (user?.role !== 'admin' && (item.id === 'inventory' || item.id === 'reports')) return false;
+        // FULL_SERVICE: Show everything, but restrict inventory, reports, and audits to admin
+        if (user?.role !== 'admin' && (item.id === 'inventory' || item.id === 'reports' || item.id === 'audits')) return false;
 
         return true;
     });

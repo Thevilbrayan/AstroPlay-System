@@ -32,35 +32,35 @@ export const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-950 via-slate-950 to-slate-950 p-4 text-slate-200 font-sans overflow-hidden">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 font-sans overflow-hidden">
 
       {/* Decorative Background Elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[100px] animate-pulse"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/10 rounded-full blur-[100px] animate-pulse delay-1000"></div>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/20 dark:bg-blue-600/10 rounded-full blur-[100px] animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/20 dark:bg-indigo-600/10 rounded-full blur-[100px] animate-pulse delay-1000"></div>
       </div>
 
       <div className="relative w-full max-w-md z-10">
 
-        {/* Glass Container */}
-        <div className="backdrop-blur-xl bg-slate-900/40 border border-slate-700/50 shadow-2xl rounded-2xl overflow-hidden ring-1 ring-white/10">
+        {/* Card Container */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-xl dark:shadow-2xl dark:shadow-blue-900/10 rounded-2xl overflow-hidden">
 
           {/* Header Branding */}
-          <div className="p-8 pb-6 text-center border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent">
-            <div className="inline-flex items-center justify-center p-3 mb-4 rounded-full bg-blue-500/10 ring-1 ring-blue-400/30 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-              <Rocket className="w-8 h-8 text-blue-400" />
+          <div className="p-8 pb-6 text-center border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-800/20">
+            <div className="inline-flex items-center justify-center p-3 mb-4 rounded-xl bg-blue-100 dark:bg-blue-500/10 ring-1 ring-blue-200 dark:ring-blue-400/30 shadow-inner">
+              <Rocket className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-100 tracking-tight mb-1">
-              AstroPlay <span className="text-blue-400">OS</span>
+            <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight mb-1">
+              AstroPlay <span className="text-blue-600 dark:text-blue-400">OS</span>
             </h1>
-            <p className="text-sm text-slate-400 font-medium tracking-wide uppercase mb-4">Sistema Operativo de Gestión</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium tracking-wide uppercase mb-4">Sistema Operativo de Gestión</p>
 
             {/* Lock Screen Workstation Context Info */}
             {workstationName && (
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-800/80 rounded-full border border-slate-700/50">
-                <Monitor className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-semibold text-slate-300">
-                  Estación: <span className="text-emerald-400">{workstationName}</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-slate-800/80 rounded-full border border-emerald-200 dark:border-slate-700/50">
+                <Monitor className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span className="text-xs font-semibold text-emerald-800 dark:text-slate-300">
+                  Estación: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{workstationName}</span>
                 </span>
               </div>
             )}
@@ -77,16 +77,16 @@ export const Login = () => {
               )}
 
               {/* Email Input */}
-              <div className="space-y-1 group">
-                <label className="text-xs font-semibold text-slate-400 ml-1 uppercase tracking-wider">Correo Electrónico</label>
-                <div className="relative transition-all duration-300 transform group-focus-within:scale-[1.01]">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+              <div className="space-y-1.5 group">
+                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1 uppercase tracking-wider">Correo Electrónico</label>
+                <div className="relative transition-all duration-300">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                   </div>
                   <input
                     type="email"
                     required
-                    className="block w-full pl-10 pr-3 py-3 border border-slate-700/50 rounded-xl leading-5 bg-slate-950/50 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 focus:bg-slate-900/80 transition-all duration-200 sm:text-sm shadow-inner"
+                    className="block w-full pl-11 pr-4 py-3 border border-slate-200 dark:border-slate-700/50 rounded-xl leading-5 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900/80 transition-all font-medium sm:text-sm"
                     placeholder="usuario@astroplay.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -95,23 +95,23 @@ export const Login = () => {
               </div>
 
               {/* Password Input */}
-              <div className="space-y-1 group">
-                <label className="text-xs font-semibold text-slate-400 ml-1 uppercase tracking-wider">Contraseña</label>
-                <div className="relative transition-all duration-300 transform group-focus-within:scale-[1.01]">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+              <div className="space-y-1.5 group">
+                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1 uppercase tracking-wider">Contraseña</label>
+                <div className="relative transition-all duration-300">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                   </div>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
-                    className="block w-full pl-10 pr-10 py-3 border border-slate-700/50 rounded-xl leading-5 bg-slate-950/50 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 focus:bg-slate-900/80 transition-all duration-200 sm:text-sm shadow-inner"
+                    className="block w-full pl-11 pr-11 py-3 border border-slate-200 dark:border-slate-700/50 rounded-xl leading-5 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900/80 transition-all font-medium sm:text-sm"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-300 transition-colors focus:outline-none"
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors focus:outline-none"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -123,7 +123,7 @@ export const Login = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-blue-900/20 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5"
+                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
               >
                 {loading ? (
                   <Loader2 className="animate-spin h-5 w-5 text-white" />
@@ -137,17 +137,17 @@ export const Login = () => {
           </div>
 
           {/* Footer */}
-          <div className="px-8 py-4 bg-slate-950/30 border-t border-white/5 text-center flex justify-between items-center text-[10px] text-slate-500">
-            <span>v1.0.0</span>
-            <span className="flex items-center gap-1">
-              Powered by <span className="font-semibold text-slate-400">Borde Studio</span> <Sparkles className="w-3 h-3 text-yellow-500/50" />
+          <div className="px-8 py-4 bg-slate-50/80 dark:bg-slate-950/30 border-t border-slate-100 dark:border-white/5 text-center flex justify-between items-center text-[10px] text-slate-500">
+            <span className="font-medium">v1.2.0</span>
+            <span className="flex items-center gap-1 font-medium">
+              Powered by <span className="font-bold text-slate-700 dark:text-slate-400">Borde Studio</span> <Sparkles className="w-3 h-3 text-amber-500" />
             </span>
           </div>
 
         </div>
 
         {/* Shadow reflection */}
-        <div className="absolute -bottom-4 left-4 right-4 h-4 bg-black/40 blur-xl rounded-[100%]"></div>
+        <div className="absolute -bottom-4 left-4 right-4 h-4 bg-black/10 dark:bg-black/40 blur-xl rounded-[100%]"></div>
       </div>
     </div>
   );

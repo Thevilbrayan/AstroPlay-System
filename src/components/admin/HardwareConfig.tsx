@@ -4,7 +4,7 @@ import { Asset, Workstation } from '../../types';
 import { useAuthStore } from '../../store/auth.store';
 import { Wrench, Plus, Trash2, Box } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import Button from '../ui/Button';
+import { Button } from '../ui/button';
 
 export const HardwareConfig: React.FC = () => {
     const { user } = useAuthStore();
@@ -107,7 +107,7 @@ export const HardwareConfig: React.FC = () => {
                     </h1>
                     <p className="text-slate-400 mt-2">Gestiona el inventario de activos físicos por estación (ej: Carritos, Dinos)</p>
                 </div>
-                <Button onClick={() => setShowModal(true)} variant="primary" className="gap-2">
+                <Button onClick={() => setShowModal(true)} className="gap-2">
                     <Plus className="w-5 h-5" /> Añadir Activo
                 </Button>
             </div>
@@ -245,8 +245,8 @@ export const HardwareConfig: React.FC = () => {
                         </div>
 
                         <div className="flex justify-end gap-3 mt-8">
-                            <Button variant="ghost" onClick={() => setShowModal(false)}>Cancelar</Button>
-                            <Button variant="primary" onClick={handleCreate} disabled={!newName || !newWorkstation}>Guardar Activo</Button>
+                            <Button variant="outline" onClick={() => setShowModal(false)}>Cancelar</Button>
+                            <Button onClick={handleCreate} disabled={!newName || !newWorkstation}>Guardar Activo</Button>
                         </div>
                     </div>
                 </div>

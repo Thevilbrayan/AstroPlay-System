@@ -1,6 +1,6 @@
 import React from 'react';
 import { AlertCircle, CheckCircle2, Info, XCircle, X } from 'lucide-react';
-import Button from './Button';
+import { Button } from '@/components/ui/button';
 
 export type AlertType = 'success' | 'error' | 'warning' | 'info';
 
@@ -10,10 +10,12 @@ interface ModalAlertProps {
     title: string;
     message: string;
     onClose: () => void;
+    onConfirm?: () => void;
     confirmText?: string;
+    cancelText?: string;
 }
 
-const ModalAlert: React.FC<ModalAlertProps> = ({ isOpen, type, title, message, onClose, confirmText = 'Entendido' }) => {
+const ModalAlert: React.FC<ModalAlertProps> = ({ isOpen, type, title, message, onClose, onConfirm, confirmText = 'Entendido', cancelText = 'Cancelar' }) => {
     if (!isOpen) return null;
 
     const getIcon = () => {
@@ -36,10 +38,10 @@ const ModalAlert: React.FC<ModalAlertProps> = ({ isOpen, type, title, message, o
 
     const getButtonVariant = () => {
         switch (type) {
-            case 'success': return 'primary';
-            case 'error': return 'danger';
+            case 'success': return 'default';
+            case 'error': return 'destructive';
             case 'warning': return 'secondary';
-            case 'info': return 'primary';
+            case 'info': return 'default';
         }
     };
 
@@ -60,13 +62,32 @@ const ModalAlert: React.FC<ModalAlertProps> = ({ isOpen, type, title, message, o
                     <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">{title}</h3>
                     <p className="text-slate-600 dark:text-slate-400 mb-6">{message}</p>
 
-                    <Button
-                        variant={getButtonVariant()}
-                        className="w-full h-12 text-base"
-                        onClick={onClose}
-                    >
-                        {confirmText}
-                    </Button>
+                    {onConfirm ? (
+                        <div className="flex gap-3 w-full">
+                            <Button
+                                variant="outline"
+                                className="flex-1 h-12 text-base"
+                                onClick={onClose}
+                            >
+                                {cancelText}
+                            </Button>
+                            <Button
+                                variant={getButtonVariant()}
+                                className="flex-1 h-12 text-base"
+                                onClick={onConfirm}
+                            >
+                                {confirmText}
+                            </Button>
+                        </div>
+                    ) : (
+                        <Button
+                            variant={getButtonVariant()}
+                            className="w-full h-12 text-base"
+                            onClick={onClose}
+                        >
+                            {confirmText}
+                        </Button>
+                    )}
                 </div>
             </div>
         </div>

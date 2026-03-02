@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { pb } from './lib/pocketbase';
 import { useAuthStore } from './store/auth.store';
 import { useWorkstationStore } from './store/workstation.store';
+import { useThemeStore } from './store/theme.store';
 import { Login } from './components/Login';
 import { WorkstationSetup } from './components/WorkstationSetup';
 import { SettingsView } from './components/admin/SettingsView';
@@ -13,11 +14,23 @@ import InventoryPOS from './components/inventory/InventoryPOS';
 import { HardwareConfig } from './components/admin/HardwareConfig';
 import MainLayout from './components/layout/MainLayout';
 import ReportsView from './components/dashboard/ReportsView';
+import CashCloseView from './components/dashboard/CashCloseView';
+import { AdminAuditView } from './components/admin/AdminAuditView';
 
 function App() {
   const { user, isValid } = useAuthStore();
   const { workstationId, clearWorkstation } = useWorkstationStore();
-  const [currentView, setCurrentView] = useState<'dashboard' | 'checkin' | 'pos' | 'inventory' | 'settings' | 'stations' | 'hardware' | 'reports'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'checkin' | 'pos' | 'inventory' | 'settings' | 'stations' | 'hardware' | 'reports' | 'cashclose' | 'audits'>('dashboard');
+  const { theme } = useThemeStore();
+
+  // Sync Global Theme to HTML root
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
 
   // Workstation Handshake
   useEffect(() => {
@@ -55,9 +68,15 @@ function App() {
     switch (currentView) {
       case 'dashboard':
         // Optional: Render LiveMonitor for Admins, TimeDashboard for Ops
-        return user?.role === 'admin' ? <LiveMonitor /> : <TimeDashboard />;
+        return user?.role === 'admin'
+          ? <LiveMonitor onNavigate={(v) => setCurrentView(v as any)} />
+          : <TimeDashboard onNavigate={(v) => setCurrentView(v as any)} />;
       case 'reports':
         return <ReportsView />;
+      case 'cashclose':
+        return <CashCloseView />;
+      case 'audits':
+        return <AdminAuditView />;
       case 'checkin':
         return <SecurityCheckIn onNavigate={setCurrentView as any} />;
       case 'pos':

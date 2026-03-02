@@ -1,52 +1,21 @@
+import * as React from "react"
 
-import React, { forwardRef } from 'react';
-import { cn } from '../../lib/utils';
+import { cn } from "@/lib/utils"
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-    label?: string;
-    error?: string;
-    icon?: React.ReactNode;
+function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+  return (
+    <input
+      type={type}
+      data-slot="input"
+      className={cn(
+        "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+        className
+      )}
+      {...props}
+    />
+  )
 }
 
-const Input = forwardRef<HTMLInputElement, InputProps>(
-    ({ className, type, label, error, icon, ...props }, ref) => {
-        return (
-            <div className="w-full space-y-2">
-                {label && (
-                    <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                        {label}
-                    </label>
-                )}
-                <div className="relative">
-                    {icon && (
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
-                            {icon}
-                        </div>
-                    )}
-                    <input
-                        type={type}
-                        className={cn(
-                            "flex h-11 w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 px-4 py-3 text-sm ring-offset-white dark:ring-offset-slate-950 file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50 text-slate-900 dark:text-slate-200 transition-all duration-200 hover:border-slate-300 dark:hover:border-white/20",
-                            icon && "pl-10",
-                            error && "border-red-300 dark:border-red-500/50 focus-visible:ring-red-500/20",
-                            // Hide number spinners
-                            "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                            className
-                        )}
-                        ref={ref}
-                        {...props}
-                    />
-                </div>
-                {error && (
-                    <p className="text-xs text-red-600 dark:text-red-400 font-medium animate-in slide-in-from-top-1">
-                        {error}
-                    </p>
-                )}
-            </div>
-        );
-    }
-);
-
-Input.displayName = "Input";
-
-export default Input;
+export { Input }

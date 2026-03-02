@@ -173,11 +173,11 @@
     },
     {
         "id": "_pb_users_auth_",
-        "listRule": "id = @request.auth.id",
-        "viewRule": "id = @request.auth.id",
-        "createRule": "",
-        "updateRule": "id = @request.auth.id",
-        "deleteRule": "id = @request.auth.id",
+        "listRule": "id = @request.auth.id || @request.auth.role = \"admin\"",
+        "viewRule": "id = @request.auth.id || @request.auth.role = \"admin\"",
+        "createRule": "@request.auth.role = \"admin\"",
+        "updateRule": "id = @request.auth.id || @request.auth.role = \"admin\"",
+        "deleteRule": "@request.auth.role = \"admin\"",
         "name": "users",
         "type": "auth",
         "fields": [
@@ -906,6 +906,259 @@
         "system": false
     },
     {
+        "id": "pbc_4202642762",
+        "listRule": "@request.auth.role = \"admin\" || cash_session.operator = @request.auth.id",
+        "viewRule": "@request.auth.role = \"admin\" || cash_session.operator = @request.auth.id",
+        "createRule": "@request.auth.id != \"\"",
+        "updateRule": "@request.auth.role = \"admin\"",
+        "deleteRule": "@request.auth.role = \"admin\"",
+        "name": "cash_movements",
+        "type": "base",
+        "fields": [
+            {
+                "autogeneratePattern": "[a-z0-9]{15}",
+                "hidden": false,
+                "id": "text3208210256",
+                "max": 15,
+                "min": 15,
+                "name": "id",
+                "pattern": "^[a-z0-9]+$",
+                "presentable": false,
+                "primaryKey": true,
+                "required": true,
+                "system": true,
+                "type": "text"
+            },
+            {
+                "cascadeDelete": false,
+                "collectionId": "pbc_299323823",
+                "hidden": false,
+                "id": "relation2393425800",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "cash_session",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "relation"
+            },
+            {
+                "hidden": false,
+                "id": "number2392944706",
+                "max": null,
+                "min": null,
+                "name": "amount",
+                "onlyInt": false,
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "number"
+            },
+            {
+                "hidden": false,
+                "id": "select2363381545",
+                "maxSelect": 1,
+                "name": "type",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "select",
+                "values": [
+                    "Entrada",
+                    "Salida"
+                ]
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text1001949196",
+                "max": 0,
+                "min": 0,
+                "name": "reason",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
+                "system": false,
+                "type": "text"
+            },
+            {
+                "hidden": false,
+                "id": "autodate2990389176",
+                "name": "created",
+                "onCreate": true,
+                "onUpdate": false,
+                "presentable": false,
+                "system": false,
+                "type": "autodate"
+            },
+            {
+                "hidden": false,
+                "id": "autodate3332085495",
+                "name": "updated",
+                "onCreate": true,
+                "onUpdate": true,
+                "presentable": false,
+                "system": false,
+                "type": "autodate"
+            }
+        ],
+        "indexes": [],
+        "system": false
+    },
+    {
+        "id": "pbc_299323823",
+        "listRule": "@request.auth.role = \"admin\" || operator = @request.auth.id",
+        "viewRule": "@request.auth.role = \"admin\" || operator = @request.auth.id",
+        "createRule": "@request.auth.id != \"\"",
+        "updateRule": "@request.auth.role = \"admin\" || (operator = @request.auth.id && status = \"open\")",
+        "deleteRule": "@request.auth.role = \"admin\"",
+        "name": "cash_sessions",
+        "type": "base",
+        "fields": [
+            {
+                "autogeneratePattern": "[a-z0-9]{15}",
+                "hidden": false,
+                "id": "text3208210256",
+                "max": 15,
+                "min": 15,
+                "name": "id",
+                "pattern": "^[a-z0-9]+$",
+                "presentable": false,
+                "primaryKey": true,
+                "required": true,
+                "system": true,
+                "type": "text"
+            },
+            {
+                "cascadeDelete": false,
+                "collectionId": "_pb_users_auth_",
+                "hidden": false,
+                "id": "relation3618023297",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "operator",
+                "presentable": false,
+                "required": true,
+                "system": false,
+                "type": "relation"
+            },
+            {
+                "hidden": false,
+                "id": "number2560536958",
+                "max": null,
+                "min": null,
+                "name": "opening_balance",
+                "onlyInt": false,
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "number"
+            },
+            {
+                "hidden": false,
+                "id": "number879448296",
+                "max": null,
+                "min": null,
+                "name": "sales_total",
+                "onlyInt": false,
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "number"
+            },
+            {
+                "hidden": false,
+                "id": "number2600051155",
+                "max": null,
+                "min": null,
+                "name": "reported_cash",
+                "onlyInt": false,
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "number"
+            },
+            {
+                "hidden": false,
+                "id": "number3543550606",
+                "max": null,
+                "min": null,
+                "name": "difference",
+                "onlyInt": false,
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "number"
+            },
+            {
+                "hidden": false,
+                "id": "select2063623452",
+                "maxSelect": 1,
+                "name": "status",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "select",
+                "values": [
+                    "open",
+                    "closed"
+                ]
+            },
+            {
+                "hidden": false,
+                "id": "date2332809220",
+                "max": "",
+                "min": "",
+                "name": "opened_at",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
+            },
+            {
+                "hidden": false,
+                "id": "date1561543039",
+                "max": "",
+                "min": "",
+                "name": "closed_at",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
+            },
+            {
+                "cascadeDelete": false,
+                "collectionId": "pbc_1023605348",
+                "hidden": false,
+                "id": "relation2671376561",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "station",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "relation"
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text18589324",
+                "max": 0,
+                "min": 0,
+                "name": "notes",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
+                "system": false,
+                "type": "text"
+            }
+        ],
+        "indexes": [],
+        "system": false
+    },
+    {
         "id": "pbc_3789154723",
         "listRule": "@request.auth.id != \"\"",
         "viewRule": "@request.auth.id != \"\"",
@@ -974,6 +1227,122 @@
                 "max": 0,
                 "min": 0,
                 "name": "allergies",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
+                "system": false,
+                "type": "text"
+            },
+            {
+                "hidden": false,
+                "id": "autodate2990389176",
+                "name": "created",
+                "onCreate": true,
+                "onUpdate": false,
+                "presentable": false,
+                "system": false,
+                "type": "autodate"
+            },
+            {
+                "hidden": false,
+                "id": "autodate3332085495",
+                "name": "updated",
+                "onCreate": true,
+                "onUpdate": true,
+                "presentable": false,
+                "system": false,
+                "type": "autodate"
+            }
+        ],
+        "indexes": [],
+        "system": false
+    },
+    {
+        "id": "pbc_2646768869",
+        "listRule": "@request.auth.role = \"admin\"",
+        "viewRule": "@request.auth.role = \"admin\"",
+        "createRule": "@request.auth.id != \"\"",
+        "updateRule": null,
+        "deleteRule": null,
+        "name": "inventory_logs",
+        "type": "base",
+        "fields": [
+            {
+                "autogeneratePattern": "[a-z0-9]{15}",
+                "hidden": false,
+                "id": "text3208210256",
+                "max": 15,
+                "min": 15,
+                "name": "id",
+                "pattern": "^[a-z0-9]+$",
+                "presentable": false,
+                "primaryKey": true,
+                "required": true,
+                "system": true,
+                "type": "text"
+            },
+            {
+                "cascadeDelete": false,
+                "collectionId": "pbc_4092854851",
+                "hidden": false,
+                "id": "relation3544843437",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "product",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "relation"
+            },
+            {
+                "hidden": false,
+                "id": "number2683508278",
+                "max": null,
+                "min": null,
+                "name": "quantity",
+                "onlyInt": false,
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "number"
+            },
+            {
+                "hidden": false,
+                "id": "select2363381545",
+                "maxSelect": 1,
+                "name": "type",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "select",
+                "values": [
+                    "Venta",
+                    "Compra",
+                    "Ajuste",
+                    "Merma"
+                ]
+            },
+            {
+                "cascadeDelete": false,
+                "collectionId": "_pb_users_auth_",
+                "hidden": false,
+                "id": "relation3618023297",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "operator",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "relation"
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text18589324",
+                "max": 0,
+                "min": 0,
+                "name": "notes",
                 "pattern": "",
                 "presentable": false,
                 "primaryKey": false,
@@ -1105,6 +1474,20 @@
                 "system": false,
                 "thumbs": [],
                 "type": "file"
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text1254922784",
+                "max": 0,
+                "min": 0,
+                "name": "card_id",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
+                "system": false,
+                "type": "text"
             },
             {
                 "hidden": false,
@@ -1320,7 +1703,7 @@
         "viewRule": "@request.auth.id != \"\"",
         "createRule": "@request.auth.id != \"\"",
         "updateRule": "@request.auth.role = \"admin\"",
-        "deleteRule": null,
+        "deleteRule": "@request.auth.role = \"admin\"",
         "name": "sales",
         "type": "base",
         "fields": [
@@ -1404,6 +1787,34 @@
                 "type": "relation"
             },
             {
+                "cascadeDelete": false,
+                "collectionId": "pbc_299323823",
+                "hidden": false,
+                "id": "relation2393425800",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "cash_session",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "relation"
+            },
+            {
+                "hidden": false,
+                "id": "select2063623452",
+                "maxSelect": 1,
+                "name": "status",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "select",
+                "values": [
+                    "completed",
+                    "cancelled",
+                    "refunded"
+                ]
+            },
+            {
                 "hidden": false,
                 "id": "autodate2990389176",
                 "name": "created",
@@ -1433,7 +1844,7 @@
         "viewRule": "@request.auth.id != \"\"",
         "createRule": "@request.auth.id != \"\"",
         "updateRule": "@request.auth.role = \"admin\"",
-        "deleteRule": null,
+        "deleteRule": "@request.auth.role = \"admin\"",
         "name": "sales_items",
         "type": "base",
         "fields": [
@@ -1554,7 +1965,7 @@
                 "collectionId": "pbc_3789154723",
                 "hidden": false,
                 "id": "relation582177833",
-                "maxSelect": 999,
+                "maxSelect": 1,
                 "minSelect": 0,
                 "name": "child",
                 "presentable": false,
@@ -1587,7 +1998,8 @@
                 "values": [
                     "active",
                     "finished",
-                    "overtime"
+                    "overtime",
+                    "paused"
                 ]
             },
             {
@@ -1640,6 +2052,29 @@
             },
             {
                 "hidden": false,
+                "id": "bool1753056537",
+                "name": "is_paid",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "bool"
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text4203193003",
+                "max": 0,
+                "min": 0,
+                "name": "bracelet_id",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
+                "system": false,
+                "type": "text"
+            },
+            {
+                "hidden": false,
                 "id": "autodate2990389176",
                 "name": "created",
                 "onCreate": true,
@@ -1657,9 +2092,59 @@
                 "presentable": false,
                 "system": false,
                 "type": "autodate"
+            },
+            {
+                "hidden": false,
+                "id": "date859349885",
+                "max": "",
+                "min": "",
+                "name": "actual_exit_time",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
+            },
+            {
+                "hidden": false,
+                "id": "date4244199920",
+                "max": "",
+                "min": "",
+                "name": "paused_at",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
+            },
+            {
+                "hidden": false,
+                "id": "number4065615697",
+                "max": null,
+                "min": null,
+                "name": "remaining_seconds",
+                "onlyInt": false,
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "number"
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text3495200222",
+                "max": 0,
+                "min": 0,
+                "name": "cancel_reason",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
+                "system": false,
+                "type": "text"
             }
         ],
-        "indexes": [],
+        "indexes": [
+            "CREATE UNIQUE INDEX `idx_sessions_bracelet_id` ON `sessions` (`bracelet_id`) WHERE `bracelet_id` != ''"
+        ],
         "system": false
     },
     {
@@ -1725,6 +2210,20 @@
                 "type": "bool"
             },
             {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text853045447",
+                "max": 0,
+                "min": 0,
+                "name": "printer_name",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
+                "system": false,
+                "type": "text"
+            },
+            {
                 "hidden": false,
                 "id": "autodate2990389176",
                 "name": "created",
@@ -1743,9 +2242,25 @@
                 "presentable": false,
                 "system": false,
                 "type": "autodate"
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text584985923",
+                "max": 0,
+                "min": 0,
+                "name": "slug",
+                "pattern": "^[a-z0-9-]+$",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
+                "system": false,
+                "type": "text"
             }
         ],
-        "indexes": [],
+        "indexes": [
+            "CREATE UNIQUE INDEX `idx_workstations_slug` ON `workstations` (`slug`) WHERE `slug` != ''"
+        ],
         "system": false
     }
 ]

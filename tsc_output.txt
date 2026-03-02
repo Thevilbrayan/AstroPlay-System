@@ -1,3 +1,5 @@
-src/components/inventory/InventoryPOS.tsx(79,56): error TS2339: Property 'type' does not exist on type 'Product'.
-src/components/inventory/InventoryPOS.tsx(80,55): error TS2339: Property 'type' does not exist on type 'Product'.
-src/components/inventory/InventoryPOS.tsx(80,85): error TS2339: Property 'type' does not exist on type 'Product'.
+src/components/SecurityCheckIn.tsx(4,13): error TS6133: 'LogOut' is declared but its value is never read.
+src/components/SecurityCheckIn.tsx(6,40): error TS6133: 'AlertCircle' is declared but its value is never read.
+src/components/SecurityCheckIn.tsx(6,53): error TS6133: 'Phone' is declared but its value is never read.
+src/components/SecurityCheckIn.tsx(6,60): error TS6133: 'Check' is declared but its value is never read.
+src/components/SecurityCheckIn.tsx(57,12): error TS6133: 'showNewChildForm' is declared but its value is never read.
