@@ -4,6 +4,7 @@ import { Session, Child, Parent, Asset } from '../../types';
 import { pb } from '../../lib/pocketbase';
 import SessionTimerCard from './SessionTimerCard';
 import { useWorkstationStore } from '../../store/workstation.store';
+import { useSettingsStore } from '../../store/settings.store';
 import { Button } from '../ui/button';
 
 interface DashboardChild {
@@ -27,6 +28,7 @@ interface TimeDashboardProps {
 
 const TimeDashboard: React.FC<TimeDashboardProps> = ({ onNavigate }) => {
     const { workstationId, workstationName } = useWorkstationStore();
+    const { settings } = useSettingsStore();
 
     const [kids, setKids] = useState<DashboardChild[]>([]);
     const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
@@ -247,7 +249,7 @@ const TimeDashboard: React.FC<TimeDashboardProps> = ({ onNavigate }) => {
                 <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-full">
                         <Users className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                        <span className="text-xs font-bold text-blue-700 dark:text-blue-300">{totalActive} activos</span>
+                        <span className="text-xs font-bold text-blue-700 dark:text-blue-300">{totalActive} / {settings?.max_capacity || 0} activos</span>
                     </div>
                     {warningCount > 0 && (
                         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-full animate-pulse">

@@ -141,6 +141,17 @@ export interface InventoryLog {
     quantity: number;
     type: 'purchase' | 'sale' | 'adjustment' | 'waste';
     operator: string; // relation to users
+}
+
+export interface Settings {
+    id: string;
+    max_capacity: number;
+    grace_period: number;
+    fraction_size: number;
+    fixed_opening_balance: number;
+    require_admin_pin: boolean;
+    require_signature: boolean;
+    is_cash_session_mandatory: boolean;
     created?: string;
     updated?: string;
 }

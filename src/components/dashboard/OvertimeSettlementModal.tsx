@@ -14,6 +14,8 @@ interface OvertimeSettlementModalProps {
     basePrice: number;
     onCharge: (child: Child, session: Session, basePrice: number) => void;
     onForgive: () => void;
+    fractionSize: number;
+    requireAdminPin: boolean;
 }
 
 const OvertimeSettlementModal: React.FC<OvertimeSettlementModalProps> = ({
@@ -24,13 +26,18 @@ const OvertimeSettlementModal: React.FC<OvertimeSettlementModalProps> = ({
     exceededMins,
     basePrice,
     onCharge,
-    onForgive
+    onForgive,
+    fractionSize,
+    requireAdminPin
 }) => {
     const [showAdminPin, setShowAdminPin] = useState(false);
 
-    // Calculate Debt: Price / 4 per 15 mins (rounded up)
-    const fractions = Math.ceil(exceededMins / 15);
-    const debtAmount = fractions * (basePrice / 4);
+    // Calculate Debt: Price / (60 / fractionSize) per fraction chunk (rounded up)
+    // Actually the previous logic was: Price / 4 per 15 mins.
+    // If fractionSize changes (say 10 mins), it should be: basePrice / (60 / 10) = basePrice / 6.
+    const priceDivisor = 60 / fractionSize;
+    const fractions = Math.ceil(exceededMins / fractionSize);
+    const debtAmount = fractions * (basePrice / priceDivisor);
 
     const handleForgiveSuccess = () => {
         setShowAdminPin(false);
@@ -76,7 +83,13 @@ const OvertimeSettlementModal: React.FC<OvertimeSettlementModalProps> = ({
                             <Button
                                 variant="outline"
                                 className="w-full h-14 rounded-xl border-amber-200 text-amber-600 hover:bg-amber-50 dark:border-amber-900/50 dark:text-amber-400 dark:hover:bg-amber-950/30 font-bold text-base flex items-center justify-center gap-2"
-                                onClick={() => setShowAdminPin(true)}
+                                onClick={() => {
+                                    if (requireAdminPin) {
+                                        setShowAdminPin(true);
+                                    } else {
+                                        onForgive();
+                                    }
+                                }}
                             >
                                 <ShieldAlert className="w-5 h-5" /> Perdonar (Admin)
                             </Button>

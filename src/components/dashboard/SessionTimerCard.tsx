@@ -10,6 +10,7 @@ import ModalAlert from '../ui/ModalAlert';
 import { Button } from '../ui/button';
 import OvertimeSettlementModal from './OvertimeSettlementModal';
 import { useCartActionStore } from '../../store/cartAction.store';
+import { useSettingsStore } from '../../store/settings.store';
 
 export interface SessionTimerCardProps {
     child: Child;
@@ -30,6 +31,7 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
     onExtend,
     onCancel
 }) => {
+    const { settings } = useSettingsStore();
     const [timeLeft, setTimeLeft] = useState(session.remaining_seconds || 0);
     const [isPaused, setIsPaused] = useState(session.status === 'paused');
     const [showPhotoModal, setShowPhotoModal] = useState(false);
@@ -183,7 +185,7 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
     };
 
     const handleFinishSession = async () => {
-        const GRACE_PERIOD = 5;
+        const GRACE_PERIOD = settings?.grace_period ?? 5;
         try {
             if (session.end_time) {
                 const nowMs = Date.now();
@@ -505,6 +507,8 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
                 basePrice={sessionBasePrice}
                 onCharge={handleChargeOvertime}
                 onForgive={handleForgiveOvertime}
+                fractionSize={settings?.fraction_size ?? 15}
+                requireAdminPin={settings?.require_admin_pin ?? true}
             />
         </React.Fragment>
     );

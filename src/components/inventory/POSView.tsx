@@ -14,6 +14,7 @@ import { triggerWristbandPrint } from '../../lib/printer';
 import { incrementSessionSales, getNextOpeningBalance } from '../../lib/cashSession';
 import { createInventoryLog } from '../../lib/inventoryLog';
 import { useCartActionStore } from '../../store/cartAction.store';
+import { useSettingsStore } from '../../store/settings.store';
 
 interface CartItem {
     id: string; // Unique ID for the cart item, since identical products might be for different children
@@ -54,6 +55,7 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
     const [isProcessing, setIsProcessing] = useState(false);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const autoCartDone = useRef(false);
+    const { settings } = useSettingsStore();
 
     // --- Cart Action Store Hook (Overtime) ---
     const { pendingAction, clearPendingAction } = useCartActionStore();
@@ -67,12 +69,14 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
                 price: pendingAction.basePrice / 4,
             };
 
+            const fractionSize = settings?.fraction_size ?? 15;
+            const priceDivisor = 60 / fractionSize;
             const now = Date.now();
             const end = new Date(pendingAction.session.end_time || '').getTime();
-            let fractions = Math.ceil((now - end) / 60000 / 15);
+            let fractions = Math.ceil((now - end) / 60000 / fractionSize);
             if (fractions < 1) fractions = 1;
 
-            overtimeProduct.price = fractions * (pendingAction.basePrice / 4);
+            overtimeProduct.price = fractions * (pendingAction.basePrice / priceDivisor);
 
             setCart(prev => [
                 ...prev,
@@ -100,9 +104,11 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
                         const end = new Date(item.sessionToFinish.end_time).getTime();
                         const diffMins = Math.floor((now - end) / 60000);
                         if (diffMins > 0) {
-                            let fractions = Math.ceil(diffMins / 15);
+                            const fractionSize = settings?.fraction_size ?? 15;
+                            const priceDivisor = 60 / fractionSize;
+                            let fractions = Math.ceil(diffMins / fractionSize);
                             if (fractions < 1) fractions = 1;
-                            const newPrice = fractions * (item.basePrice / 4);
+                            const newPrice = fractions * (item.basePrice / priceDivisor);
                             if (newPrice !== item.product.price) {
                                 hasChanges = true;
                                 return {
@@ -597,6 +603,9 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
         { key: 'socks' as const, label: 'Calcetas' },
         { key: 'snack' as const, label: 'Snacks' },
     ];
+    const isCashMandatory = settings?.is_cash_session_mandatory ?? false;
+    const isShowingGate = !isSessionLoading && !activeSession && isCashMandatory;
+    const isShowingPOS = !isSessionLoading && (activeSession || !isCashMandatory);
 
     return (
         <div className="flex flex-col h-full gap-3">
@@ -608,7 +617,7 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
                 </div>
             )}
 
-            {!isSessionLoading && !activeSession && (
+            {isShowingGate && (
                 <div className="flex-1 flex items-center justify-center">
                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 shadow-xl p-10 max-w-md w-full flex flex-col items-center text-center">
                         <div className="p-4 bg-blue-100 dark:bg-blue-500/10 rounded-2xl mb-5">
@@ -650,7 +659,7 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
                 </div>
             )}
 
-            {!isSessionLoading && activeSession && (<>
+            {isShowingPOS && (<>
 
                 {/* Active Check-In Banner */}
                 {activeParent && workstationType !== 'TIME_ONLY' && (

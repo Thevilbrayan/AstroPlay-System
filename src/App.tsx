@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { pb } from './lib/pocketbase';
+import { useSettingsStore } from './store/settings.store';
 import { useAuthStore } from './store/auth.store';
 import { useWorkstationStore } from './store/workstation.store';
 import { useThemeStore } from './store/theme.store';
@@ -22,8 +23,12 @@ function App() {
   const { workstationId, clearWorkstation } = useWorkstationStore();
   const [currentView, setCurrentView] = useState<'dashboard' | 'checkin' | 'pos' | 'inventory' | 'settings' | 'stations' | 'hardware' | 'reports' | 'cashclose' | 'audits'>('dashboard');
   const { theme } = useThemeStore();
+  const { fetchSettings } = useSettingsStore();
 
-  // Sync Global Theme to HTML root
+  // Initialize Global Settings
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
   useEffect(() => {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -84,11 +89,11 @@ function App() {
       case 'inventory':
         return <InventoryPOS view="inventory" onNavigate={(v) => setCurrentView(v as any)} />;
       case 'settings':
-        return <SettingsView />;
+        return user?.role === 'admin' ? <SettingsView /> : <TimeDashboard />;
       case 'stations':
-        return <StationManager />;
+        return user?.role === 'admin' ? <StationManager /> : <TimeDashboard />;
       case 'hardware':
-        return <HardwareConfig />;
+        return user?.role === 'admin' ? <HardwareConfig /> : <TimeDashboard />;
       default:
         return user?.role === 'admin' ? <LiveMonitor /> : <TimeDashboard />;
     }
