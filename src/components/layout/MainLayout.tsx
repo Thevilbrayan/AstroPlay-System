@@ -30,7 +30,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentView, onNaviga
             {/* Main Content Area */}
             <div
                 className="flex-1 flex flex-col transition-all duration-300 ease-in-out min-h-0"
-                style={{ marginLeft: isSidebarCollapsed ? 64 : 256 }}
+                style={{ marginLeft: isSidebarCollapsed ? 60 : 220 }}
             >
                 {/* Spacer for title bar (36px) + header (80px) — does NOT eat into children's h-full */}
                 <div className={`shrink-0 ${isFullscreen ? 'h-20' : 'h-[116px]'}`} />

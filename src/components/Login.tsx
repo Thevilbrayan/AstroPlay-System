@@ -104,7 +104,7 @@ export const Login = () => {
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
-                    className="block w-full pl-11 pr-11 py-3 border border-slate-200 dark:border-slate-700/50 rounded-xl leading-5 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900/80 transition-all font-medium sm:text-sm"
+                    className="block w-full pl-11 pr-11 py-3 border border-slate-200 dark:border-slate-700/50 rounded-xl leading-5 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900/80 transition-all font-medium sm:text-sm [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

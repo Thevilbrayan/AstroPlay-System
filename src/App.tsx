@@ -12,23 +12,33 @@ import { LiveMonitor } from './components/dashboard/LiveMonitor';
 import TimeDashboard from './components/dashboard/TimeDashboard';
 import SecurityCheckIn from './components/SecurityCheckIn';
 import InventoryPOS from './components/inventory/InventoryPOS';
-import { HardwareConfig } from './components/admin/HardwareConfig';
 import MainLayout from './components/layout/MainLayout';
 import ReportsView from './components/dashboard/ReportsView';
 import CashCloseView from './components/dashboard/CashCloseView';
 import { AdminAuditView } from './components/admin/AdminAuditView';
+import { UsersView } from './components/admin/UsersView';
+import { CustomersView } from './components/admin/CustomersView';
 
 function App() {
   const { user, isValid } = useAuthStore();
   const { workstationId, clearWorkstation } = useWorkstationStore();
-  const [currentView, setCurrentView] = useState<'dashboard' | 'checkin' | 'pos' | 'inventory' | 'settings' | 'stations' | 'hardware' | 'reports' | 'cashclose' | 'audits'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'checkin' | 'pos' | 'inventory' | 'settings' | 'stations' | 'reports' | 'cashclose' | 'audits' | 'users' | 'customers'>('dashboard');
   const { theme } = useThemeStore();
   const { fetchSettings } = useSettingsStore();
 
-  // Initialize Global Settings
+  // Initialize Global Settings — re-fetch after login (isValid: false→true)
+  // isValid always starts false (pb.authStore.clear() on module load),
+  // so this correctly fires only after the user authenticates with PocketBase.
   useEffect(() => {
+    if (!isValid) return;
     fetchSettings();
-  }, [fetchSettings]);
+  }, [fetchSettings, isValid, user?.id]);
+
+  // Reset view to dashboard when user changes (prevents leftover admin views for operators)
+  useEffect(() => {
+    setCurrentView('dashboard');
+  }, [user?.id]);
+
   useEffect(() => {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -81,7 +91,7 @@ function App() {
       case 'cashclose':
         return <CashCloseView />;
       case 'audits':
-        return <AdminAuditView />;
+        return user?.role === 'admin' ? <AdminAuditView /> : <TimeDashboard />;
       case 'checkin':
         return <SecurityCheckIn onNavigate={setCurrentView as any} />;
       case 'pos':
@@ -92,8 +102,10 @@ function App() {
         return user?.role === 'admin' ? <SettingsView /> : <TimeDashboard />;
       case 'stations':
         return user?.role === 'admin' ? <StationManager /> : <TimeDashboard />;
-      case 'hardware':
-        return user?.role === 'admin' ? <HardwareConfig /> : <TimeDashboard />;
+      case 'users':
+        return user?.role === 'admin' ? <UsersView /> : <TimeDashboard />;
+      case 'customers':
+        return user?.role === 'admin' ? <CustomersView /> : <TimeDashboard />;
       default:
         return user?.role === 'admin' ? <LiveMonitor /> : <TimeDashboard />;
     }

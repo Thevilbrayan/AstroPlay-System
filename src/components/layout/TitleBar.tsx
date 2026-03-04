@@ -1,27 +1,36 @@
 import { useState, useEffect } from 'react';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Minus, Square, X, Maximize2, Copy, Shrink } from 'lucide-react';
 import { useUIStore } from '../../store/ui.store';
+
+// Detecta si la app está corriendo dentro de Tauri (no en un browser normal)
+const isTauri = typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
 
 export function TitleBar() {
     const [isMaximized, setIsMaximized] = useState(false);
     const { isFullscreen, setFullscreen } = useUIStore();
 
     useEffect(() => {
-        const appWindow = getCurrentWindow();
-        appWindow.isMaximized().then(setIsMaximized);
-        appWindow.isFullscreen().then(setFullscreen);
+        if (!isTauri) return;
 
         let unlistenResize: (() => void) | undefined;
-        appWindow.onResized(async () => {
+
+        const setup = async () => {
+            const { getCurrentWindow } = await import('@tauri-apps/api/window');
+            const appWindow = getCurrentWindow();
             setIsMaximized(await appWindow.isMaximized());
             setFullscreen(await appWindow.isFullscreen());
-        }).then((fn) => { unlistenResize = fn; });
+            unlistenResize = await appWindow.onResized(async () => {
+                setIsMaximized(await appWindow.isMaximized());
+                setFullscreen(await appWindow.isFullscreen());
+            });
+        };
+        setup();
 
         // F11 to toggle fullscreen
         const handleKey = async (e: KeyboardEvent) => {
             if (e.key === 'F11') {
                 e.preventDefault();
+                const { getCurrentWindow } = await import('@tauri-apps/api/window');
                 const w = getCurrentWindow();
                 const current = await w.isFullscreen();
                 await w.setFullscreen(!current);
@@ -36,18 +45,33 @@ export function TitleBar() {
         };
     }, []);
 
-    const handleMinimize = () => getCurrentWindow().minimize();
+    const handleMinimize = async () => {
+        if (!isTauri) return;
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        getCurrentWindow().minimize();
+    };
     const handleMaximize = async () => {
+        if (!isTauri) return;
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
         const w = getCurrentWindow();
         if (isMaximized) { await w.unmaximize(); setIsMaximized(false); }
         else { await w.maximize(); setIsMaximized(true); }
     };
     const handleFullscreen = async () => {
+        if (!isTauri) return;
         const next = !isFullscreen;
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
         await getCurrentWindow().setFullscreen(next);
         setFullscreen(next);
     };
-    const handleClose = () => getCurrentWindow().close();
+    const handleClose = async () => {
+        if (!isTauri) return;
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        getCurrentWindow().close();
+    };
+
+    // En el browser no mostramos la barra de título nativa
+    if (!isTauri) return null;
 
     // In fullscreen: show a floating exit button only
     if (isFullscreen) {

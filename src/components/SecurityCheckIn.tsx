@@ -3,7 +3,7 @@ import Webcam from 'react-webcam';
 import {
     Shield, SwitchCamera, Camera, Scan, Search,
     CheckCircle2, Plus, User, Smile, Trash2,
-    Watch, Baby, ShieldCheck, Printer, Activity, X, RefreshCw
+    Watch, Baby, ShieldCheck, Printer, Activity, X, RefreshCw, Star
 } from 'lucide-react';
 import { Parent, Child } from '../types';
 import { useSessionStore } from '../store/session.store';
@@ -377,6 +377,12 @@ const SecurityCheckIn: React.FC<Props> = ({ onNavigate }) => {
                                                 <span className="text-2xl font-black">{(selParent.total_visits || 0) + 1}</span>
                                                 <span className="text-xs font-medium text-slate-500 uppercase leading-none">Visitas<br />Totales</span>
                                             </div>
+                                            {(selParent.loyalty_points ?? 0) > 0 && (
+                                                <div className="flex items-center gap-1 mt-1 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-2 py-1 rounded-lg">
+                                                    <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                                                    <span className="text-xs font-bold text-amber-700 dark:text-amber-300">{selParent.loyalty_points} pts</span>
+                                                </div>
+                                            )}
                                             <button onClick={reset} className="text-[10px] text-red-500 uppercase font-bold mt-2 hover:underline flex items-center gap-1 bg-red-50 dark:bg-red-950 px-2 py-1 rounded">
                                                 <X className="w-3 h-3" /> Cambiar
                                             </button>

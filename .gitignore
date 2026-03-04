@@ -19,3 +19,6 @@ src-tauri/gen/
 .vscode/
 .idea/
 .DS_Store
+
+# Claude Code
+.claude/

@@ -706,7 +706,6 @@ export const ReportsView: React.FC = () => {
         const brandWhite = 'FFFFFFFF';
         const brandRed = 'FFEF4444';
         const brandRedLight = 'FFFEE2E2';
-        const brandAmber = 'FFF59E0B';
 
         const headerFont: Partial<ExcelJS.Font> = { bold: true, color: { argb: brandWhite }, size: 11, name: 'Calibri' };
         const headerFill: ExcelJS.FillPattern = { type: 'pattern', pattern: 'solid', fgColor: { argb: brandIndigo } };
@@ -835,7 +834,7 @@ export const ReportsView: React.FC = () => {
         ];
         applyHeaderRow(wsTx, 1);
 
-        filteredSales.forEach((s, i) => {
+        filteredSales.forEach((s) => {
             const r = wsTx.addRow([
                 `#AST-${s.id.slice(0, 4).toUpperCase()}`,
                 s.created ? new Date(s.created).toLocaleString('es-MX') : '-',

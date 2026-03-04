@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Lock, Delete } from 'lucide-react';
+import { useSettingsStore } from '../../store/settings.store';
 
 interface AdminPinModalProps {
     isOpen: boolean;
@@ -10,14 +11,14 @@ interface AdminPinModalProps {
     actionDescription?: string;
 }
 
-const ADMIN_PIN = "1234"; // Hardcoded Admin PIN for now. Consider moving to .env or backend config.
-
 const AdminPinModal: React.FC<AdminPinModalProps> = ({
     isOpen,
     onClose,
     onSuccess,
     actionDescription = "Esta acción requiere autorización de administrador."
 }) => {
+    const { settings } = useSettingsStore();
+    const ADMIN_PIN = settings?.admin_pin || '1234'; // Reads from PocketBase settings
     const [pin, setPin] = useState('');
     const [error, setError] = useState(false);
 

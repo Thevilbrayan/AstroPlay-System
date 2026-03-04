@@ -33,8 +33,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
                 fraction_size: 15,
                 fixed_opening_balance: 500,
                 require_admin_pin: true,
+                admin_pin: '1234',
                 require_signature: false,
                 is_cash_session_mandatory: true,
+                loyalty_rate: 1,
+                points_redemption_value: 0.10,
             };
             set({ settings: defaultSettings, isLoading: false, error: error.message });
         }

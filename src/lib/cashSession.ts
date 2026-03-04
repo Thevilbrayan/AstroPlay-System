@@ -17,7 +17,7 @@ import { CashSession } from '../types';
 export async function getNextOpeningBalance(stationId: string): Promise<number> {
     try {
         const lastSession = await pb.collection('cash_sessions').getFirstListItem<CashSession>(
-            `station = "${stationId}"`,
+            `station = "${stationId}" && status = "closed"`,
             { sort: '-created' }
         );
         // If the last session has a cash_retained value, that is our starting point.
@@ -35,10 +35,18 @@ export async function openCashSession(
     stationId: string,
     openingBalance: number
 ): Promise<CashSession> {
-    // Guard: check no existing open session for this operator+station
+    // Guard 1: check no existing open session for this operator+station
     const existing = await getActiveCashSession(operatorId, stationId);
     if (existing) {
         throw new Error('Ya existe una sesión de caja abierta para este operador y estación.');
+    }
+
+    // Guard 2: block if there is a closed session with pending audit at this station
+    const pendingAudit = await pb.collection('cash_sessions').getList(1, 1, {
+        filter: `station = "${stationId}" && status = "closed" && audit_status = "pending"`,
+    });
+    if (pendingAudit.totalItems > 0) {
+        throw new Error('PENDING_AUDIT');
     }
 
     const record = await pb.collection('cash_sessions').create({
@@ -80,7 +88,8 @@ export async function closeCashSession(
     salesTotalOverride?: number,
     notes?: string,
     cashRetained?: number,
-    cashWithdrawn?: number
+    cashWithdrawn?: number,
+    signature?: string
 ): Promise<CashSession> {
     // Fetch the current session to get opening_balance and sales_total
     const session = await pb.collection('cash_sessions').getOne(sessionId) as unknown as CashSession;
@@ -94,17 +103,32 @@ export async function closeCashSession(
     const expectedCash = openingBalance + salesTotal;
     const difference = reportedCash - expectedCash;
 
-    const updated = await pb.collection('cash_sessions').update(sessionId, {
-        reported_cash: reportedCash,
-        sales_total: salesTotal,
-        difference: difference,
-        status: 'closed',
-        closed_at: new Date().toISOString(),
-        notes: notes || '',
-        cash_retained: cashRetained || 0,
-        cash_withdrawn: cashWithdrawn || 0,
-        audit_status: 'pending',
-    });
+    // PocketBase file fields require FormData — can't send base64 as plain string
+    const formData = new FormData();
+    formData.set('reported_cash', String(reportedCash));
+    formData.set('sales_total', String(salesTotal));
+    formData.set('difference', String(difference));
+    formData.set('status', 'closed');
+    formData.set('closed_at', new Date().toISOString());
+    formData.set('notes', notes || '');
+    formData.set('cash_retained', String(cashRetained || 0));
+    formData.set('cash_withdrawn', String(cashWithdrawn || 0));
+    formData.set('audit_status', 'pending');
+
+    if (signature && signature.startsWith('data:')) {
+        // Convert base64 dataURL → Blob → File for PocketBase file field
+        const [meta, b64] = signature.split(',');
+        const mimeMatch = meta.match(/:(.*?);/);
+        const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+        const byteString = atob(b64);
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+        const blob = new Blob([ab], { type: mime });
+        formData.set('operator_signature', blob, 'signature.png');
+    }
+
+    const updated = await pb.collection('cash_sessions').update(sessionId, formData);
 
     return updated as unknown as CashSession;
 }

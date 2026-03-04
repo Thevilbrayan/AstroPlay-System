@@ -5,20 +5,18 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
 import { Input } from '../ui/input';
-import { Settings as SettingsIcon, Save, X, RefreshCw, Shield, DollarSign, Users, Info, MonitorX, LogOut, ShieldAlert } from 'lucide-react';
+import { Settings as SettingsIcon, Save, X, RefreshCw, Shield, DollarSign, Info, ShieldAlert, Star, Eye, EyeOff } from 'lucide-react';
 import { createInventoryLog } from '../../lib/inventoryLog';
 import { useAuthStore } from '../../store/auth.store';
-import { useWorkstationStore } from '../../store/workstation.store';
 
 export const SettingsView: React.FC = () => {
     const { user } = useAuthStore();
-    const { workstationName, clearWorkstation } = useWorkstationStore();
     const { settings, updateSettings, isLoading, error } = useSettingsStore();
 
     const [localSettings, setLocalSettings] = useState<Settings | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [isConfirmingRelease, setIsConfirmingRelease] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [showPin, setShowPin] = useState(false);
 
     // Sync local state when store settings change
     useEffect(() => {
@@ -55,10 +53,6 @@ export const SettingsView: React.FC = () => {
         }
     };
 
-    const handleReleaseWorkstation = () => {
-        clearWorkstation();
-    };
-
     // Helper updaters
     const updateNumberParam = (key: keyof Settings, value: number) => {
         if (value < 0) return;
@@ -87,76 +81,22 @@ export const SettingsView: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                {/* WORKSTATION CONFIG (Legacy merged into UI) */}
+                {/* Admin zone banner */}
                 <div className="col-span-1 lg:col-span-3">
-                    <div className="mb-4 bg-blue-900/20 border border-blue-500/30 rounded-2xl p-4 flex gap-4">
-                        <div className="p-2 bg-blue-500/20 rounded-lg h-fit">
-                            <ShieldAlert className="w-6 h-6 text-blue-400" />
+                    <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-2xl p-4 flex gap-4">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-500/20 rounded-lg h-fit">
+                            <ShieldAlert className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                            <h3 className="text-blue-200 font-semibold mb-1">Zona Administrador</h3>
-                            <p className="text-sm text-blue-300">Estás accediendo a la configuración avanzada. Sé cauteloso.</p>
+                            <h3 className="text-blue-800 dark:text-blue-200 font-semibold mb-1">Zona Administrador</h3>
+                            <p className="text-sm text-blue-600 dark:text-blue-300">Estás accediendo a la configuración avanzada. Sé cauteloso.</p>
                         </div>
                     </div>
-
-                    <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 relative overflow-hidden ring-1 ring-white/10 flex flex-col sm:flex-row justify-between gap-6">
-                        <div className="space-y-4 z-10">
-                            <div>
-                                <h2 className="text-xl font-bold text-white mb-2">Identidad de Caja</h2>
-                                <p className="text-sm text-slate-400">Esta computadora está enlazada a la estación física.</p>
-                            </div>
-                            <div className="flex flex-col space-y-1">
-                                <span className="text-xs uppercase font-bold text-slate-500">Estación Asignada</span>
-                                <span className="text-2xl font-bold text-emerald-400 tracking-tight flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                                    {workstationName || 'Desconocida'}
-                                </span>
-                            </div>
-                        </div>
-                        <div className="sm:border-l border-slate-800 sm:pl-6 flex flex-col min-w-[200px] z-10">
-                            <h3 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
-                                <MonitorX className="w-4 h-4 text-slate-400" /> Liberar Software
-                            </h3>
-                            {!isConfirmingRelease ? (
-                                <button onClick={() => setIsConfirmingRelease(true)} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-medium border border-slate-700">
-                                    Reasignar Estación
-                                </button>
-                            ) : (
-                                <div className="space-y-3 w-full">
-                                    <button onClick={handleReleaseWorkstation} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white rounded-xl font-bold ring-1 ring-red-500/50">
-                                        <LogOut className="w-4 h-4" /> Ejecutar
-                                    </button>
-                                    <button onClick={() => setIsConfirmingRelease(false)} className="w-full text-sm text-slate-400 hover:text-white">Cancelar</button>
-                                </div>
-                            )}
-                        </div>
-                        <div className="absolute top-[-50px] right-[-50px] w-32 h-32 bg-red-500/10 rounded-full blur-[50px] pointer-events-none"></div>
-                    </div>
-                </div>
-
-                {/* GENERAL */}
-                <div className="col-span-1 lg:col-span-3">
-                    <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-slate-800 dark:text-slate-200">
-                        <Users className="w-5 h-5 text-blue-500" /> Capacidad y General
-                    </h2>
-                    <Card className="p-6 rounded-[1.5rem] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <label className="block text-base font-bold text-slate-700 dark:text-slate-200">Capacidad Máxima (Niños)</label>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Límite global para mostrar advertencias.</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Button variant="outline" size="icon" className="h-10 w-10 text-xl font-bold rounded-xl" onClick={() => updateNumberParam('max_capacity', localSettings.max_capacity - 10)}>-</Button>
-                                <Input type="number" value={localSettings.max_capacity} onChange={(e) => updateNumberParam('max_capacity', parseInt(e.target.value) || 0)} className="w-20 text-center font-bold text-lg h-10 rounded-xl" />
-                                <Button variant="outline" size="icon" className="h-10 w-10 text-xl font-bold rounded-xl" onClick={() => updateNumberParam('max_capacity', localSettings.max_capacity + 10)}>+</Button>
-                            </div>
-                        </div>
-                    </Card>
                 </div>
 
                 {/* FINANZAS */}
                 <div className="col-span-1 lg:col-span-3">
-                    <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-slate-800 dark:text-slate-200 mt-6">
+                    <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-slate-800 dark:text-slate-200">
                         <DollarSign className="w-5 h-5 text-green-500" /> Reglas Financieras y Tiempo Extra
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -194,6 +134,52 @@ export const SettingsView: React.FC = () => {
                                 <Input type="number" value={localSettings.fixed_opening_balance} onChange={(e) => updateNumberParam('fixed_opening_balance', parseInt(e.target.value) || 0)} className="pl-8 font-bold text-lg h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white" />
                             </div>
                         </Card>
+
+                        <Card className="p-6 rounded-[1.5rem] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+                            <div className="mb-4">
+                                <label className="block text-base font-bold text-slate-700 dark:text-slate-200">Tasa de IVA (%)</label>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Impuesto aplicado a ventas. 16 = 16 %. Usar 0 para desactivar.</p>
+                            </div>
+                            <div className="flex items-center gap-2 self-start bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl">
+                                <Button variant="ghost" size="icon" className="h-10 w-10 text-xl font-bold rounded-xl" onClick={() => updateNumberParam('iva_rate', Math.max(0, (localSettings.iva_rate ?? 16) - 1))}>-</Button>
+                                <div className="relative">
+                                    <Input type="number" min="0" max="100" step="1" value={localSettings.iva_rate ?? 16} onChange={(e) => updateNumberParam('iva_rate', parseFloat(e.target.value) || 0)} className="w-20 text-center font-bold text-lg h-10 border-0 bg-transparent pr-6" />
+                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">%</span>
+                                </div>
+                                <Button variant="ghost" size="icon" className="h-10 w-10 text-xl font-bold rounded-xl" onClick={() => updateNumberParam('iva_rate', Math.min(100, (localSettings.iva_rate ?? 16) + 1))}>+</Button>
+                            </div>
+                        </Card>
+                    </div>
+                </div>
+
+                {/* LEALTAD */}
+                <div className="col-span-1 lg:col-span-3">
+                    <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-slate-800 dark:text-slate-200 mt-6">
+                        <Star className="w-5 h-5 text-amber-500" /> Programa de Lealtad
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card className="p-6 rounded-[1.5rem] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+                            <div className="mb-4">
+                                <label className="block text-base font-bold text-slate-700 dark:text-slate-200">Puntos por $1 gastado</label>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Puntos que gana el cliente en cada peso de compra.</p>
+                            </div>
+                            <div className="flex items-center gap-2 self-start bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl">
+                                <Button variant="ghost" size="icon" className="h-10 w-10 text-xl font-bold rounded-xl" onClick={() => updateNumberParam('loyalty_rate', (localSettings.loyalty_rate ?? 1) - 1)}>-</Button>
+                                <Input type="number" value={localSettings.loyalty_rate ?? 1} onChange={(e) => updateNumberParam('loyalty_rate', parseFloat(e.target.value) || 0)} className="w-20 text-center font-bold text-lg h-10 border-0 bg-transparent" />
+                                <Button variant="ghost" size="icon" className="h-10 w-10 text-xl font-bold rounded-xl" onClick={() => updateNumberParam('loyalty_rate', (localSettings.loyalty_rate ?? 1) + 1)}>+</Button>
+                            </div>
+                        </Card>
+
+                        <Card className="p-6 rounded-[1.5rem] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+                            <div className="mb-4">
+                                <label className="block text-base font-bold text-slate-700 dark:text-slate-200">Valor de canje ($ por punto)</label>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Cuántos pesos de descuento equivale cada punto.</p>
+                            </div>
+                            <div className="relative w-44">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">$</span>
+                                <Input type="number" step="0.01" value={localSettings.points_redemption_value ?? 0.10} onChange={(e) => updateNumberParam('points_redemption_value', parseFloat(e.target.value) || 0)} className="pl-8 font-bold text-lg h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white" />
+                            </div>
+                        </Card>
                     </div>
                 </div>
 
@@ -206,9 +192,35 @@ export const SettingsView: React.FC = () => {
                         <div className="p-6 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50">
                             <div>
                                 <h4 className="font-bold text-base text-slate-800 dark:text-slate-200">Requerir PIN Administrador</h4>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Bloquea acciones directas.</p>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Bloquea acciones directas a operadores.</p>
                             </div>
                             <Switch checked={localSettings.require_admin_pin} onCheckedChange={(checked: boolean) => updateBoolParam('require_admin_pin', checked)} />
+                        </div>
+                        <div className="p-6 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                            <div>
+                                <h4 className="font-bold text-base text-slate-800 dark:text-slate-200">PIN de Administrador</h4>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">4 dígitos. Usado para autorizar acciones sensibles.</p>
+                            </div>
+                            <div className="relative">
+                                <Input
+                                    type={showPin ? 'text' : 'password'}
+                                    maxLength={4}
+                                    value={localSettings.admin_pin ?? '1234'}
+                                    onChange={(e) => {
+                                        const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                        setLocalSettings(prev => prev ? { ...prev, admin_pin: v } : prev);
+                                    }}
+                                    className="w-28 text-center font-mono font-bold text-lg h-10 rounded-xl pr-9 [&::-ms-reveal]:hidden"
+                                    placeholder="••••"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPin(v => !v)}
+                                    className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                >
+                                    {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
                         </div>
                         <div className="p-6 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50">
                             <div>
@@ -230,9 +242,12 @@ export const SettingsView: React.FC = () => {
             </div>
 
             {/* Unsaved Changes Bar */}
-            <div className={`fixed bottom-0 left-0 right-0 sm:left-64 bg-white/80 dark:bg-slate-900/90 backdrop-blur-2xl p-6 transform transition-all duration-500 z-40 border-t border-slate-200 dark:border-white/10 shadow-[0_-1px_0_rgba(0,0,0,0.05),0_-20px_50px_-20px_rgba(0,0,0,0.1)]
+            <div className={`fixed bottom-0 left-0 right-0 sm:left-64 transform transition-all duration-500 z-40
                 ${hasChanges() ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
             >
+                {/* Gradient fade para transición suave */}
+                <div className="h-12 bg-gradient-to-b from-transparent to-white dark:to-slate-950 pointer-events-none" />
+                <div className="bg-white dark:bg-slate-950 px-6 py-4">
                 <div className="max-w-5xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-amber-500/10 dark:bg-amber-500/20 flex items-center justify-center ring-1 ring-amber-500/30">
@@ -261,6 +276,7 @@ export const SettingsView: React.FC = () => {
                             Guardar Cambios
                         </Button>
                     </div>
+                </div>
                 </div>
             </div>
 

@@ -9,6 +9,7 @@ import { useAuthStore } from '../../store/auth.store';
 import { useWorkstationStore } from '../../store/workstation.store';
 import { useCashSessionStore } from '../../store/cashSession.store';
 import { closeCashSession } from '../../lib/cashSession';
+import { useSettingsStore } from '../../store/settings.store';
 import ModalAlert, { AlertType } from '../ui/ModalAlert';
 
 // ─── Denomination config ───
@@ -121,6 +122,8 @@ const CashCloseView: React.FC = () => {
     const isAdmin = user?.role === 'admin';
     const { workstationId, workstationName } = useWorkstationStore();
     const { activeSession, loadSession, clearSession: clearCashSession } = useCashSessionStore();
+    const { settings } = useSettingsStore();
+    const requireSignature = settings?.require_signature ?? true;
 
     // Data states
     const [denominations, setDenominations] = useState<Record<number, string>>({});
@@ -141,22 +144,25 @@ const CashCloseView: React.FC = () => {
     const formatCurrency = (val: number) =>
         new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val);
 
-    // Load active session
+    // Load active session — prefer the session's own operator over the current user
+    // so an admin can close an operator's session without losing context
     useEffect(() => {
-        if (user?.id && workstationId) {
-            loadSession(user.id, workstationId);
+        const operatorId = activeSession?.operator || user?.id;
+        if (operatorId && workstationId) {
+            loadSession(operatorId, workstationId);
         }
-    }, [user?.id, workstationId, loadSession]);
+    }, [user?.id, workstationId]);
 
-    // Load today's sales
+    // Load today's sales — re-runs whenever the active session changes
     useEffect(() => {
         const loadData = async () => {
+            if (!activeSession?.id) {
+                setIsLoading(false);
+                return;
+            }
             setIsLoading(true);
             try {
-                // Filter STRICTLY by the active cash session isolation
-                if (!activeSession?.id) return;
-                const filter = `cash_session = "${activeSession.id}" && operator = "${user?.id}"`;
-
+                const filter = `cash_session = "${activeSession.id}"`;
                 const fetchedSales = await pb.collection('sales').getFullList<Sale>({ filter, sort: '-created' });
                 setSales(fetchedSales);
             } catch (err) {
@@ -166,7 +172,7 @@ const CashCloseView: React.FC = () => {
             }
         };
         loadData();
-    }, []);
+    }, [activeSession?.id]);
 
     // ─── Computed ───
     const financials = useMemo(() => {
@@ -198,7 +204,10 @@ const CashCloseView: React.FC = () => {
     const isExact = Math.abs(difference) < 0.01;
     const hasCount = true; // Allow closing with 0 count
 
-    const canFinalize = sales.length > 0 && hasCount && signature && (isExact || justification.trim().length > 0);
+    // Admins must justify any discrepancy (they see the expected total).
+    // Operators do a blind count — they never see the expected total, so no justification needed.
+    const canFinalize = sales.length > 0 && hasCount && (!requireSignature || !!signature) &&
+        (!isAdmin || isExact || justification.trim().length > 0);
 
     // ─── Handlers ───
 
@@ -235,7 +244,8 @@ const CashCloseView: React.FC = () => {
                 financials.totalCash,
                 justification || undefined,
                 cashRetained,
-                cashWithdrawn
+                cashWithdrawn,
+                signature || undefined
             );
             clearCashSession();
             setShowConfirmModal(false);
@@ -414,7 +424,8 @@ const CashCloseView: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Digital Signature */}
+                    {/* Digital Signature — only shown when require_signature is enabled */}
+                    {requireSignature && (
                     <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                             <PenTool className="w-5 h-5 text-slate-400" />
@@ -431,6 +442,7 @@ const CashCloseView: React.FC = () => {
                             <p className="text-slate-400 dark:text-slate-500 text-xs text-center mt-2 italic">Click o toca para firmar digitalmente</p>
                         )}
                     </div>
+                    )}
                 </section>
 
                 {/* ─── RIGHT: Summary & Verification ─── */}
@@ -532,7 +544,7 @@ const CashCloseView: React.FC = () => {
                     <div className="bg-blue-50 dark:bg-slate-800/50 rounded-2xl p-4 flex gap-3 border border-blue-100 dark:border-slate-700 mb-6">
                         <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                         <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                            Al finalizar el cierre, se guardará el registro en el sistema y se enviará notificación al supervisor. Asegúrese de que la firma esté completa.
+                            Al finalizar el cierre, se guardará el registro en el sistema y se enviará notificación al supervisor.{requireSignature ? ' Asegúrese de que la firma esté completa.' : ''}
                         </p>
                     </div>
 

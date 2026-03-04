@@ -65,6 +65,8 @@ export interface Product {
     min_stock?: number;
     imagen?: string;
     is_for_sale?: boolean;
+    station_type?: 'FULL_SERVICE' | 'DINO_TREN' | 'TIME_ONLY' | null;
+    capacity_group?: 'train' | 'dino' | null; // DINO_TREN only: which capacity pool this product uses
     created?: string;
     updated?: string;
 }
@@ -72,9 +74,13 @@ export interface Product {
 export interface Workstation {
     id: string;
     name: string;
-    type?: 'FULL_SERVICE' | 'SNACK_ONLY' | 'TIME_ONLY';
+    type?: 'FULL_SERVICE' | 'SNACK_ONLY' | 'TIME_ONLY' | 'DINO_TREN';
     is_active?: boolean;
     printer_name?: string;
+    train_capacity?: number;      // Max passengers per train trip (DINO_TREN only)
+    dino_capacity?: number;       // Max simultaneous dino time sessions (DINO_TREN only)
+    gokart_capacity?: number;     // Number of go-karts (TIME_ONLY only)
+    playground_capacity?: number; // Max simultaneous children (FULL_SERVICE only)
     created?: string;
     updated?: string;
 }
@@ -130,6 +136,7 @@ export interface CashSession {
     audited_by?: string; // relation to users (admin)
     cash_retained?: number;
     cash_withdrawn?: number;
+    operator_signature?: string; // base64 dataURL of operator's handwritten signature
 
     created?: string;
     updated?: string;
@@ -150,8 +157,12 @@ export interface Settings {
     fraction_size: number;
     fixed_opening_balance: number;
     require_admin_pin: boolean;
+    admin_pin?: string;
     require_signature: boolean;
     is_cash_session_mandatory: boolean;
+    loyalty_rate?: number;            // puntos otorgados por cada $1 gastado
+    points_redemption_value?: number; // pesos de descuento por cada punto canjeado
+    iva_rate?: number;                // tasa de IVA aplicada a ventas (ej. 0.16 = 16%)
     created?: string;
     updated?: string;
 }

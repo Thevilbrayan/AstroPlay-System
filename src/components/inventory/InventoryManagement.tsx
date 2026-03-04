@@ -4,13 +4,24 @@ import {
     DollarSign, Coffee, ChevronDown, ChevronUp, Edit3, Truck,
     Activity, Gauge, Boxes
 } from 'lucide-react';
-import { Product, Asset } from '../../types';
+import { Product, Asset, Workstation } from '../../types';
 import { pb } from '../../lib/pocketbase';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 
 // ─── Category types for pill filter ───
 type FilterCategory = 'all' | 'snack' | 'socks' | 'service' | 'asset';
+
+// ─── Station filter — 'all' and 'none' are special; anything else is a workstation type string ───
+type FilterStation = 'all' | 'none' | string;
+
+// ─── Color mapping for known workstation types ───
+const TYPE_COLORS: Record<string, string> = {
+    FULL_SERVICE: 'text-blue-600 dark:text-blue-400',
+    DINO_TREN: 'text-emerald-600 dark:text-emerald-400',
+    TIME_ONLY: 'text-violet-600 dark:text-violet-400',
+    SNACK_ONLY: 'text-amber-600 dark:text-amber-400',
+};
 
 interface InventoryManagementProps {
     products: Product[];
@@ -29,8 +40,10 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterCategory, setFilterCategory] = useState<FilterCategory>('all');
+    const [filterStation, setFilterStation] = useState<FilterStation>('all');
     const [expandedSocks, setExpandedSocks] = useState<Record<string, boolean>>({});
     const [assets, setAssets] = useState<Asset[]>([]);
+    const [stationFilters, setStationFilters] = useState<Array<{ type: string; name: string }>>([]);
 
     // ─── Load assets for fleet status ───
     useEffect(() => {
@@ -39,11 +52,29 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({
                 const records = await pb.collection('assets').getFullList<Asset>({ sort: 'name' });
                 setAssets(records);
             } catch (e) {
-                // Assets collection may not exist yet
                 console.warn('Could not load assets:', e);
             }
         };
         loadAssets();
+    }, []);
+
+    // ─── Load workstation types for station filter ───
+    useEffect(() => {
+        const loadWorkstations = async () => {
+            try {
+                const ws = await pb.collection('workstations').getFullList<Workstation>({ sort: 'name', $autoCancel: false });
+                const typeMap = new Map<string, string>();
+                ws.forEach(w => {
+                    if (w.type && !typeMap.has(w.type)) {
+                        typeMap.set(w.type, w.name);
+                    }
+                });
+                setStationFilters(Array.from(typeMap.entries()).map(([type, name]) => ({ type, name })));
+            } catch (e) {
+                console.warn('Could not load workstations:', e);
+            }
+        };
+        loadWorkstations();
     }, []);
 
     // ─── Resolve category ───
@@ -94,10 +125,15 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({
         return products.filter(product => {
             const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
             if (!matchesSearch) return false;
-            if (filterCategory === 'all') return true;
-            return getCategory(product) === filterCategory;
+            if (filterCategory !== 'all' && getCategory(product) !== filterCategory) return false;
+            if (filterStation === 'none') {
+                if (product.station_type) return false; // only show products with no station
+            } else if (filterStation !== 'all') {
+                if (product.station_type !== filterStation) return false;
+            }
+            return true;
         });
-    }, [products, searchQuery, filterCategory]);
+    }, [products, searchQuery, filterCategory, filterStation]);
 
     // ─── Category display helpers ───
     const getCategoryLabel = (p: Product) => {
@@ -215,44 +251,84 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({
             </div>
 
             {/* ── Filters Row ── */}
-            <div className="flex items-center gap-4 flex-wrap">
-                <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <Input
-                        placeholder="Buscar producto..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 bg-white/80 dark:bg-slate-900/50 border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100"
-                    />
+            <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-4 flex-wrap">
+                    <div className="relative flex-1 max-w-sm">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                        <Input
+                            placeholder="Buscar producto..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 bg-white/80 dark:bg-slate-900/50 border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100"
+                        />
+                    </div>
+
+                    {/* Category Pill Filters */}
+                    <div className="flex p-1 bg-slate-100 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-white/5">
+                        {pillFilters.map(pf => (
+                            <button
+                                key={pf.key}
+                                onClick={() => setFilterCategory(pf.key)}
+                                className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${filterCategory === pf.key
+                                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-200 dark:ring-transparent'
+                                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                    }`}
+                            >
+                                {pf.icon}
+                                {pf.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Bulk Adjustment button */}
+                    {onBulkAdjust && (
+                        <Button
+                            onClick={onBulkAdjust}
+                            className="ml-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all active:scale-95"
+                        >
+                            <Truck className="w-4 h-4" />
+                            Ajuste de Inventario
+                        </Button>
+                    )}
                 </div>
 
-                {/* Pill Filters */}
-                <div className="flex p-1 bg-slate-100 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-white/5">
-                    {pillFilters.map(pf => (
+                {/* Station Filter Row */}
+                <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-600 shrink-0">Estación:</span>
+                    {/* Static: All */}
+                    <button
+                        onClick={() => setFilterStation('all')}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all border ${filterStation === 'all'
+                            ? 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white shadow-sm'
+                            : 'border-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'
+                        }`}
+                    >
+                        Todas
+                    </button>
+                    {/* Dynamic: one button per unique workstation type */}
+                    {stationFilters.map(sf => (
                         <button
-                            key={pf.key}
-                            onClick={() => setFilterCategory(pf.key)}
-                            className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${filterCategory === pf.key
-                                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-200 dark:ring-transparent'
-                                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                                }`}
+                            key={sf.type}
+                            onClick={() => setFilterStation(sf.type)}
+                            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all border ${filterStation === sf.type
+                                ? 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white shadow-sm'
+                                : `border-transparent ${TYPE_COLORS[sf.type] ?? 'text-slate-500'} hover:bg-slate-100 dark:hover:bg-slate-800/50`
+                            }`}
                         >
-                            {pf.icon}
-                            {pf.label}
+                            {sf.name}
                         </button>
                     ))}
-                </div>
-
-                {/* Bulk Adjustment button */}
-                {onBulkAdjust && (
-                    <Button
-                        onClick={onBulkAdjust}
-                        className="ml-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all active:scale-95"
+                    {/* Static: General (products with no station assigned) */}
+                    <button
+                        onClick={() => setFilterStation('none')}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all border ${filterStation === 'none'
+                            ? 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white shadow-sm'
+                            : 'border-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'
+                        }`}
                     >
-                        <Truck className="w-4 h-4" />
-                        Ajuste de Inventario
-                    </Button>
-                )}
+                        General
+                    </button>
+                </div>
             </div>
 
             {/* ── Socks Size Monitor (only when socks filter active) ── */}

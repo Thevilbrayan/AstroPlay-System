@@ -76,8 +76,20 @@ const InventoryPOS: React.FC<InventoryPOSProps> = ({ view, onNavigate }) => {
     };
 
     const posProducts = products.filter(p => {
+        // Products explicitly tagged for a different station type are always hidden
+        if (p.station_type && p.station_type !== workstationType) return false;
+
         if (workstationType === 'SNACK_ONLY') return p.category !== 'service';
-        if (workstationType === 'TIME_ONLY') return p.category === 'service';
+
+        // GoKarts: only service products explicitly tagged for TIME_ONLY
+        if (workstationType === 'TIME_ONLY')
+            return p.category === 'service' && p.station_type === 'TIME_ONLY';
+
+        // Dino-Train: only service products explicitly tagged for DINO_TREN
+        if (workstationType === 'DINO_TREN')
+            return p.category === 'service' && p.station_type === 'DINO_TREN';
+
+        // FULL_SERVICE (Playground): all products NOT exclusively tagged for another station
         return true;
     });
 

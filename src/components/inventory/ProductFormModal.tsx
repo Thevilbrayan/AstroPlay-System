@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, X, Save, RefreshCw, AlertTriangle, Package, Zap, Image as ImageIcon, Coffee } from 'lucide-react';
-import { Product } from '../../types';
+import { Product, Workstation } from '../../types';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -24,10 +24,30 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, ed
     const [stock, setStock] = useState('0');
     const [minStock, setMinStock] = useState('5');
     const [cost, setCost] = useState('');
+    const [stationType, setStationType] = useState<string>('');
+    const [capacityGroup, setCapacityGroup] = useState<'train' | 'dino' | ''>('');
+    const [noFixedDuration, setNoFixedDuration] = useState(false);
+    const [workstationOptions, setWorkstationOptions] = useState<Array<{ type: string; name: string }>>([]);
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState('');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isLoadingSave, setIsLoadingSave] = useState(false);
+
+    // Load workstation types for the station selector
+    useEffect(() => {
+        if (!isOpen) return;
+        const load = async () => {
+            try {
+                const ws = await pb.collection('workstations').getFullList<Workstation>({ sort: 'name', $autoCancel: false });
+                const typeMap = new Map<string, string>();
+                ws.forEach(w => { if (w.type && !typeMap.has(w.type)) typeMap.set(w.type, w.name); });
+                setWorkstationOptions(Array.from(typeMap.entries()).map(([type, name]) => ({ type, name })));
+            } catch (e) {
+                console.warn('Could not load workstations:', e);
+            }
+        };
+        load();
+    }, [isOpen]);
 
     useEffect(() => {
         if (isOpen) {
@@ -35,12 +55,16 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, ed
                 setCategory(editingProduct.category || 'service');
                 setName(editingProduct.name);
                 setPrice(editingProduct.price?.toString() || '');
-                setDurationMin(editingProduct.duration_min?.toString() || '60');
+                const dur = editingProduct.duration_min ?? 60;
+                setNoFixedDuration(dur === 0);
+                setDurationMin(dur.toString());
                 setSubcategory(editingProduct.subcategory || '');
                 setSize(editingProduct.size || 'M');
                 setStock(editingProduct.stock?.toString() || '0');
                 setMinStock(editingProduct.min_stock?.toString() || '5');
                 setCost(editingProduct.cost?.toString() || '');
+                setStationType(editingProduct.station_type || '');
+                setCapacityGroup(editingProduct.capacity_group || '');
                 setPreviewUrl(editingProduct.imagen || '');
                 setImageFile(null);
             } else {
@@ -55,11 +79,14 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, ed
         setName('');
         setPrice('');
         setDurationMin('60');
+        setNoFixedDuration(false);
         setSubcategory('');
         setSize('M');
         setStock('0');
         setMinStock('5');
         setCost('');
+        setStationType('');
+        setCapacityGroup('');
         setImageFile(null);
         setPreviewUrl('');
         setErrorMessage(null);
@@ -97,6 +124,8 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, ed
             }
 
             if (cost) formData.append('cost', cost);
+            formData.append('station_type', stationType);
+            formData.append('capacity_group', stationType === 'DINO_TREN' && category === 'service' ? capacityGroup : '');
             if (imageFile) formData.append('imagen', imageFile);
 
             if (editingProduct) {
@@ -191,18 +220,37 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, ed
 
                             {/* Dynamic Fields */}
                             {category === 'service' && (
-                                <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 px-1">
-                                    <div className="flex flex-col gap-1.5">
-                                        <Label htmlFor="duration-min">Duración (minutos)</Label>
-                                        <Input
-                                            id="duration-min"
-                                            type="number"
-                                            value={durationMin}
-                                            onChange={e => setDurationMin(e.target.value)}
-                                            placeholder="60"
+                                <div className="animate-in fade-in slide-in-from-top-1 px-1 space-y-3">
+                                    {/* No fixed duration toggle */}
+                                    <label className="flex items-center gap-2.5 cursor-pointer group select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={noFixedDuration}
+                                            onChange={e => {
+                                                setNoFixedDuration(e.target.checked);
+                                                if (e.target.checked) setDurationMin('0');
+                                            }}
+                                            className="w-4 h-4 rounded accent-blue-600"
                                         />
-                                    </div>
-                                    <span className="self-end pb-[11px] text-xs text-slate-500 dark:text-slate-400 italic">Dejar como 0 u 800 si es abierto</span>
+                                        <span className="text-xs font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200">
+                                            Sin duración fija (ej. Boleto de Tren)
+                                        </span>
+                                    </label>
+                                    {!noFixedDuration && (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="flex flex-col gap-1.5">
+                                                <Label htmlFor="duration-min">Duración (minutos)</Label>
+                                                <Input
+                                                    id="duration-min"
+                                                    type="number"
+                                                    value={durationMin}
+                                                    onChange={e => setDurationMin(e.target.value)}
+                                                    placeholder="60"
+                                                />
+                                            </div>
+                                            <span className="self-end pb-[11px] text-xs text-slate-500 dark:text-slate-400 italic">0 u 800 si es tiempo abierto</span>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -291,6 +339,43 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, ed
                                             />
                                         </div>
                                     )}
+                                </div>
+                            )}
+                            {/* Station Type */}
+                            <div>
+                                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Disponible en estación</label>
+                                <select
+                                    value={stationType}
+                                    onChange={e => { setStationType(e.target.value); setCapacityGroup(''); }}
+                                    className="w-full h-10 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                >
+                                    <option value="">Todas las estaciones</option>
+                                    {workstationOptions.map(ws => (
+                                        <option key={ws.type} value={ws.type}>{ws.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Capacity Group — only for DINO_TREN service products */}
+                            {category === 'service' && stationType === 'DINO_TREN' && (
+                                <div className="animate-in fade-in slide-in-from-top-1">
+                                    <label className="block text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-1.5">Tipo de capacidad (Dino-Tren)</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { val: 'dino', label: '🦕 Dinos' },
+                                            { val: 'train', label: '🚂 Tren' },
+                                        ].map(opt => (
+                                            <button
+                                                key={opt.val}
+                                                type="button"
+                                                onClick={() => setCapacityGroup(opt.val as 'train' | 'dino')}
+                                                className={`py-2 rounded-lg text-xs font-bold transition-all border ${capacityGroup === opt.val ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/50' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/5 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Determina contra qué cupo se verifica la capacidad en el POS.</p>
                                 </div>
                             )}
                         </div>

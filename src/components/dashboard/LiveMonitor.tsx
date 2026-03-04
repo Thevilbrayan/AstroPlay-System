@@ -69,9 +69,22 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({ onNavigate }) => {
     };
 
     useEffect(() => {
-        loadMasterData();
-        const interval = setInterval(loadMasterData, 10000); // 10s tick for real-time feel
-        return () => clearInterval(interval);
+        let isMounted = true;
+        const wrappedLoad = () => { if (isMounted) loadMasterData(); };
+
+        wrappedLoad();
+
+        // Realtime subscription — reacts instantly to session changes across all terminals
+        pb.collection('sessions').subscribe('*', wrappedLoad);
+
+        // Fallback polling every 60s to recover from potential WebSocket disconnections
+        const interval = setInterval(wrappedLoad, 60000);
+
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+            pb.collection('sessions').unsubscribe('*');
+        };
     }, []);
 
     // Helper functions for UI

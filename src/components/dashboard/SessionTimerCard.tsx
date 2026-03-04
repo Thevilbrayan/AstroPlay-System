@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, ShieldAlert, Phone, BarChart2, Bell, Play, Pause, Plus, Trash2, CheckSquare } from 'lucide-react';
 import { Child, Session, Parent } from '../../types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
@@ -11,6 +11,7 @@ import { Button } from '../ui/button';
 import OvertimeSettlementModal from './OvertimeSettlementModal';
 import { useCartActionStore } from '../../store/cartAction.store';
 import { useSettingsStore } from '../../store/settings.store';
+import { useAuthStore } from '../../store/auth.store';
 
 export interface SessionTimerCardProps {
     child: Child;
@@ -32,17 +33,49 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
     onCancel
 }) => {
     const { settings } = useSettingsStore();
+    const { user } = useAuthStore();
     const [timeLeft, setTimeLeft] = useState(session.remaining_seconds || 0);
     const [isPaused, setIsPaused] = useState(session.status === 'paused');
     const [showPhotoModal, setShowPhotoModal] = useState(false);
     const [showCancelPinModal, setShowCancelPinModal] = useState(false);
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [showFinishConfirm, setShowFinishConfirm] = useState(false);
+
+    // Operators need PIN to cancel; admins get a confirmation dialog instead
+    const requirePin = (settings?.require_admin_pin ?? true) && user?.role !== 'admin';
 
     // Overtime Modal State
     const [showOvertimeModal, setShowOvertimeModal] = useState(false);
     const [exceededMins, setExceededMins] = useState(0);
     const [sessionBasePrice, setSessionBasePrice] = useState(100);
+
+    // Overtime notification — fires once when session crosses into overtime
+    const notifiedRef = useRef(false);
+
+    // Reset notification flag when session changes
+    useEffect(() => {
+        notifiedRef.current = false;
+    }, [session.id]);
+
+    // Beep + set flag when overtime begins
+    useEffect(() => {
+        if (timeLeft <= 0 && !isPaused && !notifiedRef.current) {
+            notifiedRef.current = true;
+            try {
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = 880;
+                gain.gain.setValueAtTime(0.4, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.6);
+            } catch (_) { /* Audio blocked in some contexts */ }
+        }
+    }, [timeLeft, isPaused]);
 
     // Touch handling for swipes (Logic only, no visual transform to prevent layout breaks)
     const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -159,7 +192,11 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
                     end_time: newEndTime.toISOString()
                 });
             }
-        } catch (error) {
+        } catch (error: any) {
+            if (error?.status === 404) {
+                onCancel?.(); // Remove this ghost card from the parent list
+                return;
+            }
             console.error("Error toggling pause state in DB:", error);
             alert("Error: No se pudo actualizar el estado de la base de datos. ¿Importaste el esquema de PocketBase con los nuevos campos?");
             // Revert optimistic UI on failure
@@ -171,14 +208,15 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
 
     const handleCancelSession = async () => {
         try {
-            // For now just marking it finished with a cancel_reason.
-            // A fully implemented refund would also hit the `sales` collection.
             await pb.collection('sessions').update(session.id, {
                 status: 'finished',
                 cancel_reason: 'Cancelado por Administrador'
             });
-            alert("Sesión Cancelada Exitosamente.");
-        } catch (error) {
+            setShowCancelConfirm(false);
+            setShowCancelPinModal(false);
+            onCancel?.(); // Remove card from UI only AFTER DB confirms
+        } catch (error: any) {
+            if (error?.status === 404) { onCancel?.(); return; }
             console.error("Error cancelling session:", error);
             alert("Error al intentar cancelar la sesión.");
         }
@@ -228,7 +266,13 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
             });
             setShowDetailModal(false);
             setShowFinishConfirm(false);
-        } catch (error) {
+        } catch (error: any) {
+            if (error?.status === 404) {
+                setShowDetailModal(false);
+                setShowFinishConfirm(false);
+                onCancel?.(); // Remove ghost card immediately
+                return;
+            }
             console.error("Error finishing session:", error);
             alert("Error al finalizar la sesión.");
         }
@@ -256,7 +300,12 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
             });
             setShowOvertimeModal(false);
             alert("Sesión perdonada y finalizada.");
-        } catch (error) {
+        } catch (error: any) {
+            if (error?.status === 404) {
+                setShowOvertimeModal(false);
+                onCancel?.();
+                return;
+            }
             console.error("Error", error);
             alert("Error al perdonar la sesión");
         }
@@ -275,8 +324,15 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
             >
                 <div className="p-5 flex flex-col h-full cursor-pointer relative">
 
+                    {/* Overtime Alert Banner */}
+                    {isOvertime && (
+                        <div className="absolute top-0 left-0 right-0 bg-red-500 text-white text-[10px] font-black uppercase tracking-widest text-center py-1 animate-pulse z-10">
+                            ¡ Tiempo Vencido !
+                        </div>
+                    )}
+
                     {/* Top Row: Name & ID */}
-                    <div className="flex justify-between items-start mb-6">
+                    <div className={`flex justify-between items-start mb-6 ${isOvertime ? 'mt-5' : ''}`}>
                         <h3 className="font-ex font-black text-2xl text-slate-800 dark:text-white truncate pr-2 tracking-tight" title={child.name}>
                             {child.name.split(' ')[0]}
                         </h3>
@@ -339,8 +395,11 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
                             if (onExtend) onExtend(minutes);
                         }}
                         onCancel={() => {
-                            if (onCancel) onCancel();
-                            setShowCancelPinModal(true);
+                            if (requirePin) {
+                                setShowCancelPinModal(true);
+                            } else {
+                                setShowCancelConfirm(true);
+                            }
                         }}
                         onFinish={() => setShowFinishConfirm(true)}
                     />
@@ -420,7 +479,11 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
                             <Button
                                 variant="outline"
                                 className="h-14 rounded-xl border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/30 font-bold text-base flex items-center justify-center gap-2 active:scale-95"
-                                onClick={() => { setShowDetailModal(false); setShowCancelPinModal(true); }}
+                                onClick={() => {
+                                    setShowDetailModal(false);
+                                    if (requirePin) setShowCancelPinModal(true);
+                                    else setShowCancelConfirm(true);
+                                }}
                             >
                                 <Trash2 className="w-5 h-5" /> Cancelar
                             </Button>
@@ -444,12 +507,24 @@ const SessionTimerCard: React.FC<SessionTimerCardProps> = ({
                 </DialogContent>
             </Dialog>
 
-            {/* Cancel Session PIN Modal */}
+            {/* Cancel Session PIN Modal (operators) */}
             <AdminPinModal
                 isOpen={showCancelPinModal}
                 onClose={() => setShowCancelPinModal(false)}
                 onSuccess={handleCancelSession}
                 actionDescription={`Autoriza la cancelación de la sesión de ${child.name}.`}
+            />
+
+            {/* Cancel Confirmation (admins — no PIN required) */}
+            <ModalAlert
+                isOpen={showCancelConfirm}
+                type="warning"
+                title="¿Cancelar Sesión?"
+                message={`Cancelarás la sesión de ${child.name}. Esto marcará el turno como finalizado y no podrá revertirse.`}
+                confirmText="Sí, Cancelar"
+                cancelText="No, Regresar"
+                onClose={() => setShowCancelConfirm(false)}
+                onConfirm={handleCancelSession}
             />
 
             {/* Finish Session Confirmation */}

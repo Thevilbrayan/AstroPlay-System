@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, ShoppingCart, Package, Trash2, Plus, Minus, CreditCard, Banknote, Zap, CheckCircle2, Users, X, AlertTriangle, ChevronRight, Loader2, Wallet } from 'lucide-react';
+import { Search, ShoppingCart, Package, Trash2, Plus, Minus, CreditCard, Banknote, Zap, CheckCircle2, Users, X, AlertTriangle, ChevronRight, Loader2, Wallet, Star } from 'lucide-react';
 import { Product, Asset, Session, Child } from '../../types';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -44,16 +44,17 @@ const getBaseName = (name: string) => {
 const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleComplete, onNavigate }) => {
     const { user } = useAuthStore();
     const { activeParent, selectedChild, isFirstVisit, clearSession } = useSessionStore();
-    const { workstationId, workstationName, workstationType } = useWorkstationStore();
+    const { workstationId, workstationName, workstationType, trainCapacity, dinoCapacity, gokartCapacity } = useWorkstationStore();
     const { activeSession, isLoading: isSessionLoading, loadSession, openNewSession } = useCashSessionStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTypeFilter, setActiveTypeFilter] = useState<'all' | 'service' | 'socks' | 'snack'>('all');
     const [checkoutStep, setCheckoutStep] = useState<'services' | 'socks' | 'snacks'>('services');
-    const isWizardMode = !!activeParent && workstationType !== 'SNACK_ONLY' && workstationType !== 'TIME_ONLY';
+    const isWizardMode = !!activeParent && workstationType !== 'SNACK_ONLY' && workstationType !== 'TIME_ONLY' && workstationType !== 'DINO_TREN';
     const [cart, setCart] = useState<CartItem[]>([]);
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
     const [isProcessing, setIsProcessing] = useState(false);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
     const autoCartDone = useRef(false);
     const { settings } = useSettingsStore();
 
@@ -129,6 +130,7 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
 
     // ─── Cash Session Gate ───
     const [openingBalance, setOpeningBalance] = useState<string>('0');
+    const [openBalanceError, setOpenBalanceError] = useState<string | null>(null);
     const [isOpeningSession, setIsOpeningSession] = useState(false);
     const sessionChecked = useRef(false);
 
@@ -150,12 +152,25 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
 
     const handleOpenSession = async () => {
         if (!user?.id || !workstationId) return;
+        const balance = parseFloat(openingBalance);
+        if (isNaN(balance) || balance < 0) {
+            setOpenBalanceError('Ingresa un monto válido (mínimo $0)');
+            return;
+        }
+        setOpenBalanceError(null);
         setIsOpeningSession(true);
         try {
-            const balance = parseFloat(openingBalance) || 0;
             await openNewSession(user.id, workstationId, balance);
-        } catch (err) {
-            console.error('Error opening session:', err);
+        } catch (err: any) {
+            if (err?.message === 'PENDING_AUDIT') {
+                setOpenBalanceError(
+                    'Existe un corte de caja pendiente de aprobación en esta estación. ' +
+                    'El administrador debe aprobar el turno anterior antes de abrir una nueva sesión.'
+                );
+            } else {
+                setOpenBalanceError('Error al abrir la sesión. Intenta de nuevo.');
+                console.error('Error opening session:', err);
+            }
         } finally {
             setIsOpeningSession(false);
         }
@@ -189,23 +204,22 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
 
     // Load Capacity Data
     useEffect(() => {
-        if (workstationType !== 'TIME_ONLY' || !workstationId) return;
+        if ((workstationType !== 'TIME_ONLY' && workstationType !== 'DINO_TREN') || !workstationId) return;
+
+        // Set max capacity from store (admin-configured per workstation)
+        if (workstationType === 'TIME_ONLY') {
+            setMaxCapacity(gokartCapacity ?? 0);
+        } else if (workstationType === 'DINO_TREN') {
+            setMaxCapacity(dinoCapacity ?? 0);
+        }
 
         let isMounted = true;
         const loadCapacityData = async () => {
             try {
-                // 1. Fetch total Assets for this workstation that are NOT in maintenance
-                const assets = await pb.collection('assets').getFullList<Asset>({
-                    filter: `workstation = '${workstationId}' && status != 'maintenance'`
-                });
-
-                // 2. Fetch active sessions created at this workstation (via operator or sale link - simplified counting active sessions)
                 const activeSessions = await pb.collection('sessions').getFullList<Session>({
                     filter: `status = 'active'`
                 });
-
                 if (isMounted) {
-                    setMaxCapacity(assets.length);
                     setCurrentUsage(activeSessions.length);
                 }
             } catch (error: any) {
@@ -220,7 +234,7 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
             isMounted = false;
             clearInterval(interval);
         };
-    }, [workstationType, workstationId]);
+    }, [workstationType, workstationId, gokartCapacity, dinoCapacity]);
 
     // Reset wizard step when family changes
     useEffect(() => {
@@ -237,9 +251,9 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
             // Note: Disabled is_for_sale check temporarily because existing PocketBase products default to false
             // if (product.is_for_sale === false) return false;
 
-            // By Workstation Type Enforcment
+            // By Workstation Type Enforcement
             if (workstationType === 'SNACK_ONLY' && product.category === 'service') return false;
-            if (workstationType === 'TIME_ONLY' && product.category !== 'service') return false;
+            if ((workstationType === 'TIME_ONLY' || workstationType === 'DINO_TREN') && product.category !== 'service') return false;
 
             const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -270,6 +284,13 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
     const subtotal = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
     const tax = subtotal * 0.16;
     const total = subtotal + tax;
+
+    // Loyalty program
+    const loyaltyRate = settings?.loyalty_rate ?? 1;
+    const pointsRedemptionValue = settings?.points_redemption_value ?? 0.10;
+    const availablePoints = activeParent?.loyalty_points ?? 0;
+    const maxLoyaltyDiscount = Math.floor(availablePoints * pointsRedemptionValue * 100) / 100;
+    const totalAfterDiscount = Math.max(0, total - loyaltyDiscount);
 
     const addToCart = (product: Product, customPriceValue?: number, forceChild?: Child) => {
         // 1. Variable Price Check
@@ -310,14 +331,30 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
 
         if (product.category !== 'service' && (product.stock || 0) === 0) return;
 
-        // Capacity Check for TIME_ONLY Services
+        // Capacity Check for TIME_ONLY and DINO_TREN Services
         const isService = product.category === 'service';
         if (workstationType === 'TIME_ONLY' && isService) {
-            const currentCartQuantity = cart.filter(item => item.product.category === 'service').reduce((sum, item) => sum + item.quantity, 0);
-            if (currentUsage + currentCartQuantity >= maxCapacity) {
-                // Cannot add more, capacity full
-                showAlert('error', 'Capacidad Agotada', `No hay más activos disponibles (${maxCapacity} máx).`);
+            const currentCartQty = cart.filter(item => item.product.category === 'service').reduce((sum, item) => sum + item.quantity, 0);
+            if (currentUsage + currentCartQty >= maxCapacity) {
+                showAlert('error', 'Capacidad Agotada', `No hay más GoKarts disponibles (${maxCapacity} máx).`);
                 return;
+            }
+        }
+        if (workstationType === 'DINO_TREN' && isService) {
+            const group = product.capacity_group;
+            if (group === 'dino') {
+                const dinoCartQty = cart.filter(item => item.product.category === 'service' && item.product.capacity_group === 'dino').reduce((sum, item) => sum + item.quantity, 0);
+                if (currentUsage + dinoCartQty >= maxCapacity) {
+                    showAlert('error', 'Capacidad Agotada', `No hay más lugares para Dinosaurios (${maxCapacity} máx).`);
+                    return;
+                }
+            } else if (group === 'train') {
+                const trainCartQty = cart.filter(item => item.product.capacity_group === 'train').reduce((sum, item) => sum + item.quantity, 0);
+                const effectiveTrainCap = trainCapacity ?? 0;
+                if (trainCartQty >= effectiveTrainCap) {
+                    showAlert('error', 'Capacidad del Tren', `El tren tiene capacidad para ${effectiveTrainCap} pasajeros por viaje.`);
+                    return;
+                }
             }
         }
 
@@ -367,12 +404,28 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
                     return item; // Block pushing beyond 1 for assigned child service
                 }
 
-                // Capacity Check constraints (for TIME_ONLY primarily)
+                // Capacity Check constraints
                 if (workstationType === 'TIME_ONLY' && isService && delta > 0) {
-                    const totalServiceQuantityInCart = cart.filter(c => c.product.category === 'service').reduce((sum, c) => sum + c.quantity, 0);
-                    if (currentUsage + totalServiceQuantityInCart >= maxCapacity) {
-                        showAlert('error', 'Capacidad Agotada', 'No hay más activos disponibles.');
+                    const totalServiceQty = cart.filter(c => c.product.category === 'service').reduce((sum, c) => sum + c.quantity, 0);
+                    if (currentUsage + totalServiceQty >= maxCapacity) {
+                        showAlert('error', 'Capacidad Agotada', 'No hay más GoKarts disponibles.');
                         return item;
+                    }
+                }
+                if (workstationType === 'DINO_TREN' && isService && delta > 0) {
+                    const group = item.product.capacity_group;
+                    if (group === 'dino') {
+                        const dinoQty = cart.filter(c => c.product.category === 'service' && c.product.capacity_group === 'dino').reduce((sum, c) => sum + c.quantity, 0);
+                        if (currentUsage + dinoQty >= maxCapacity) {
+                            showAlert('error', 'Capacidad Agotada', 'No hay más lugares para Dinosaurios.');
+                            return item;
+                        }
+                    } else if (group === 'train') {
+                        const trainQty = cart.filter(c => c.product.capacity_group === 'train').reduce((sum, c) => sum + c.quantity, 0);
+                        if (trainQty >= (trainCapacity ?? 0)) {
+                            showAlert('error', 'Capacidad del Tren', `El tren tiene capacidad para ${trainCapacity} pasajeros.`);
+                            return item;
+                        }
                     }
                 }
 
@@ -407,17 +460,23 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
 
         setIsProcessing(true);
         try {
-            // --- PASO A: Contexto del Cliente (Update visits) ---
+            // --- PASO A: Contexto del Cliente (Update visits + loyalty points) ---
             if (activeParent && activeParent.id) {
                 const updatedVisits = (activeParent.total_visits || 0) + 1;
+                const earnedPoints = Math.floor(totalAfterDiscount * loyaltyRate);
+                const pointsUsed = loyaltyDiscount > 0
+                    ? Math.ceil(loyaltyDiscount / (pointsRedemptionValue || 0.10))
+                    : 0;
+                const newPoints = Math.max(0, (activeParent.loyalty_points || 0) - pointsUsed + earnedPoints);
                 await pb.collection('parents').update(activeParent.id, {
-                    total_visits: updatedVisits
+                    total_visits: updatedVisits,
+                    loyalty_points: newPoints,
                 });
             }
 
             // --- PASO B: Creación del Registro Maestro (Sale) ---
             const saleData: Record<string, any> = {
-                total_amount: total,
+                total_amount: totalAfterDiscount,
                 payment_method: paymentMethod,
                 operator: user?.id || '',
                 workstation: workstationId,
@@ -461,10 +520,14 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
                 if (isService) {
                     // --- OVERTIME INTERCEPT ---
                     if (item.sessionToFinish) {
-                        await pb.collection('sessions').update(item.sessionToFinish.id, {
-                            status: 'finished',
-                            is_paid: true
-                        });
+                        try {
+                            await pb.collection('sessions').update(item.sessionToFinish.id, {
+                                status: 'finished',
+                                is_paid: true
+                            });
+                        } catch (sessErr: any) {
+                            if (sessErr?.status !== 404) throw sessErr; // 404 = already finished, safe to ignore
+                        }
                         continue; // Skip creating a new session
                     }
 
@@ -546,12 +609,13 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
 
             // 4. Success: Clear context and Redirect
             setCart([]);
+            setLoyaltyDiscount(0);
             const familyLabel = activeParent ? ` — Familia ${activeParent.name}` : '';
             setSuccessMessage(`Venta y sesión registradas exitosamente${familyLabel}`);
 
             // 5. Increment cash session sales total (non-blocking)
             if (activeSession?.id && paymentMethod === 'cash') {
-                incrementSessionSales(activeSession.id, total).catch(err =>
+                incrementSessionSales(activeSession.id, totalAfterDiscount).catch(err =>
                     console.error('[CashSession] Failed to increment sales total:', err)
                 );
             }
@@ -635,18 +699,28 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
                                 <div className="relative">
                                     <Banknote className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500 pointer-events-none" />
                                     <input
-                                        type="number"
+                                        type="text"
+                                        inputMode="decimal"
                                         value={openingBalance}
-                                        onChange={(e) => setOpeningBalance(e.target.value)}
+                                        onChange={(e) => {
+                                            const v = e.target.value.replace(/[^0-9.]/g, '');
+                                            if ((v.match(/\./g) || []).length <= 1) {
+                                                setOpeningBalance(v);
+                                                setOpenBalanceError(null);
+                                            }
+                                        }}
                                         placeholder="0.00"
-                                        className="w-full h-14 rounded-xl border-2 border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800 pl-12 pr-4 text-2xl font-bold text-slate-900 dark:text-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+                                        className={`w-full h-14 rounded-xl border-2 bg-slate-50 dark:bg-slate-800 pl-12 pr-4 text-2xl font-bold text-slate-900 dark:text-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors ${openBalanceError ? 'border-red-400 dark:border-red-500' : 'border-slate-200 dark:border-white/10 focus:border-blue-500'}`}
                                     />
                                 </div>
+                                {openBalanceError && (
+                                    <p className="text-red-500 text-xs mt-1.5 text-left">{openBalanceError}</p>
+                                )}
                             </div>
                             <Button
                                 onClick={handleOpenSession}
-                                disabled={isOpeningSession}
-                                className="w-full h-14 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-base shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-wait flex items-center justify-center gap-2"
+                                disabled={isOpeningSession || isNaN(parseFloat(openingBalance)) || parseFloat(openingBalance) < 0}
+                                className="w-full h-14 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-base shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {isOpeningSession ? (
                                     <><Loader2 className="w-5 h-5 animate-spin" /> Abriendo...</>
@@ -662,7 +736,7 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
             {isShowingPOS && (<>
 
                 {/* Active Check-In Banner */}
-                {activeParent && workstationType !== 'TIME_ONLY' && (
+                {activeParent && workstationType !== 'TIME_ONLY' && workstationType !== 'DINO_TREN' && (
                     <div className="flex items-center gap-3 px-4 py-2.5 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl shrink-0">
                         <Users className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" />
                         <span className="text-sm font-semibold text-blue-800 dark:text-blue-200">Atendiendo a:</span>
@@ -683,14 +757,14 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
                     {/* Left: Product Gallery */}
                     <div className="flex-1 flex flex-col gap-4 min-w-0">
 
-                        {/* Strict Filtering for TIME_ONLY */}
+                        {/* Capacity Bar — TIME_ONLY */}
                         {workstationType === 'TIME_ONLY' && (
-                            <div className="flex items-center justify-between p-4 bg-white/80 dark:bg-slate-900/60 border border-blue-200 dark:border-blue-500/20 rounded-xl shadow-sm dark:shadow-inner">
-                                <span className="text-blue-600 dark:text-blue-400 font-bold flex items-center gap-2">
-                                    <Zap className="w-5 h-5" /> Modo Express
+                            <div className="flex items-center justify-between p-4 bg-white/80 dark:bg-slate-900/60 border border-violet-200 dark:border-violet-500/20 rounded-xl shadow-sm dark:shadow-inner">
+                                <span className="text-violet-600 dark:text-violet-400 font-bold flex items-center gap-2">
+                                    <Zap className="w-5 h-5" /> GoKarts
                                 </span>
                                 <div className="flex items-center gap-3">
-                                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold">Uso actual:</span>
+                                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold">En uso:</span>
                                     <span className={`text-lg font-black ${currentUsage >= maxCapacity ? 'text-red-500 dark:text-red-400' : 'text-slate-900 dark:text-slate-100'}`}>
                                         {currentUsage} <span className="text-sm font-semibold text-slate-400 dark:text-slate-500">/ {maxCapacity}</span>
                                     </span>
@@ -698,7 +772,35 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
                             </div>
                         )}
 
-                        {workstationType !== 'TIME_ONLY' && (
+                        {/* Capacity Bar — DINO_TREN */}
+                        {workstationType === 'DINO_TREN' && (
+                            <div className="flex items-center justify-between p-4 bg-white/80 dark:bg-slate-900/60 border border-emerald-200 dark:border-emerald-500/20 rounded-xl shadow-sm dark:shadow-inner">
+                                <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-2">
+                                    <Zap className="w-5 h-5" /> Dino-Tren
+                                </span>
+                                <div className="flex items-center gap-4">
+                                    {maxCapacity > 0 && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold">🦕 Dinos:</span>
+                                            <span className={`text-lg font-black ${currentUsage >= maxCapacity ? 'text-red-500 dark:text-red-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                                                {currentUsage} <span className="text-sm font-semibold text-slate-400 dark:text-slate-500">/ {maxCapacity}</span>
+                                            </span>
+                                        </div>
+                                    )}
+                                    {trainCapacity != null && trainCapacity > 0 && (
+                                        <div className="flex items-center gap-2 pl-4 border-l border-slate-200 dark:border-slate-700">
+                                            <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold">🚂 Tren:</span>
+                                            <span className={`text-lg font-black ${cart.filter(c => c.product.capacity_group === 'train').reduce((s, c) => s + c.quantity, 0) >= trainCapacity ? 'text-red-500 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-300'}`}>
+                                                {cart.filter(c => c.product.capacity_group === 'train').reduce((s, c) => s + c.quantity, 0)}
+                                                <span className="text-sm font-semibold text-slate-400 dark:text-slate-500"> / {trainCapacity}</span>
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {workstationType !== 'TIME_ONLY' && workstationType !== 'DINO_TREN' && (
                             <>
                                 {/* Type Filters / Wizard Tabs */}
                                 {isWizardMode ? (
@@ -733,8 +835,8 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
                             </>
                         )}
 
-                        {/* Search & Category (hidden if TIME_ONLY and < 6 products) */}
-                        {!(workstationType === 'TIME_ONLY' && filteredProducts.length < 6) && (
+                        {/* Search & Category (hidden if TIME_ONLY/DINO_TREN and < 6 products) */}
+                        {!((workstationType === 'TIME_ONLY' || workstationType === 'DINO_TREN') && filteredProducts.length < 6) && (
                             <div className="flex items-center gap-4">
                                 <div className="relative flex-1">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -752,7 +854,7 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
 
                         {/* Product Grid — scroll wrapper separate from grid to prevent row compression */}
                         <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-4">
-                            <div className={`grid ${workstationType === 'TIME_ONLY' ? 'grid-cols-2 lg:grid-cols-3 gap-8 pb-10' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'}`}>
+                            <div className={`grid ${(workstationType === 'TIME_ONLY' || workstationType === 'DINO_TREN') ? 'grid-cols-2 lg:grid-cols-3 gap-8 pb-10' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'}`}>
                                 {isWizardMode && checkoutStep === 'socks' ? (
                                     (() => {
                                         const grouped = filteredProducts.reduce((acc, product) => {
@@ -999,6 +1101,32 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
 
                         {/* Footer */}
                         <div className="p-5 bg-slate-50 dark:bg-slate-900/80 border-t border-slate-200 dark:border-white/5 backdrop-blur-md space-y-4">
+                            {/* Loyalty Points Banner */}
+                            {activeParent && availablePoints > 0 && (
+                                <div className="flex items-center justify-between bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl px-4 py-2.5">
+                                    <div className="flex items-center gap-2">
+                                        <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                                        <span className="text-sm font-bold text-amber-700 dark:text-amber-300">{availablePoints} pts</span>
+                                        <span className="text-xs text-amber-500 dark:text-amber-400">= {formatCurrency(maxLoyaltyDiscount)} desc.</span>
+                                    </div>
+                                    {loyaltyDiscount === 0 ? (
+                                        <button
+                                            onClick={() => setLoyaltyDiscount(Math.min(maxLoyaltyDiscount, total))}
+                                            className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-200 dark:bg-amber-500/20 hover:bg-amber-300 dark:hover:bg-amber-500/30 px-3 py-1 rounded-lg transition-colors"
+                                        >
+                                            Canjear
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => setLoyaltyDiscount(0)}
+                                            className="text-xs font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-500/10 hover:bg-red-200 dark:hover:bg-red-500/20 px-3 py-1 rounded-lg transition-colors"
+                                        >
+                                            Quitar
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+
                             <div className="space-y-2 text-sm">
                                 <div className="flex justify-between text-slate-500 dark:text-slate-400">
                                     <span>Subtotal</span>
@@ -1008,9 +1136,15 @@ const POSView: React.FC<POSViewProps> = ({ products, formatCurrency, onSaleCompl
                                     <span>IVA (16%)</span>
                                     <span>{formatCurrency(tax)}</span>
                                 </div>
+                                {loyaltyDiscount > 0 && (
+                                    <div className="flex justify-between text-amber-600 dark:text-amber-400 font-medium">
+                                        <span className="flex items-center gap-1"><Star className="w-3 h-3 fill-amber-500" /> Descuento puntos</span>
+                                        <span>- {formatCurrency(loyaltyDiscount)}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between text-slate-900 dark:text-slate-200 text-lg font-bold pt-2 border-t border-slate-200 dark:border-white/10 mt-2">
                                     <span>Total</span>
-                                    <span className="text-blue-600 dark:text-blue-400">{formatCurrency(total)}</span>
+                                    <span className="text-blue-600 dark:text-blue-400">{formatCurrency(totalAfterDiscount)}</span>
                                 </div>
                             </div>
 
