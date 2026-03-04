@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/auth.store';
 import { Monitor, CheckCircle2, Loader2, Lock, Plus, X, Check } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
+import { TitleBar } from './layout/TitleBar';
 
 interface Workstation {
     id: string;
@@ -99,7 +100,8 @@ export const WorkstationSetup: React.FC = () => {
     // Operators should never select a workstation — admin sets it up per device
     if (!isAdmin) {
         return (
-            <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex items-center justify-center p-4">
+            <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex items-center justify-center p-4 pt-9">
+                <TitleBar />
                 <Card className="w-full max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-white/5 shadow-2xl rounded-3xl relative overflow-hidden">
                     <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
                     <CardContent className="p-8 flex flex-col items-center text-center">
@@ -124,7 +126,8 @@ export const WorkstationSetup: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex items-center justify-center p-4">
+            <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex items-center justify-center p-4 pt-9">
+                <TitleBar />
                 <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
             </div>
         );
@@ -132,6 +135,7 @@ export const WorkstationSetup: React.FC = () => {
 
     return (
         <>
+            <TitleBar />
             {/* Create workstation modal */}
             {showCreate && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -185,7 +189,7 @@ export const WorkstationSetup: React.FC = () => {
                 </div>
             )}
 
-            <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex items-center justify-center p-4">
+            <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex items-center justify-center p-4 pt-9">
                 <Card className="w-full max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-white/5 shadow-2xl rounded-3xl relative overflow-hidden">
                     <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
                     <CardContent className="p-8">

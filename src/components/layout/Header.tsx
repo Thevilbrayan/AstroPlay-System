@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Bell, Clock, Sun, Moon } from 'lucide-react';
-import { useUIStore } from '../../store/ui.store';
 import { useThemeStore } from '../../store/theme.store';
 
 interface HeaderProps {
@@ -8,7 +7,6 @@ interface HeaderProps {
 }
 
 const Header = ({ isCollapsed = false }: HeaderProps) => {
-    const { isFullscreen } = useUIStore();
     const { theme, toggleTheme } = useThemeStore();
     const [time, setTime] = useState(new Date());
 
@@ -19,7 +17,7 @@ const Header = ({ isCollapsed = false }: HeaderProps) => {
 
     return (
         <header
-            className={`fixed ${isFullscreen ? 'top-0' : 'top-9'} right-0 h-20 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between px-8 z-40 transition-all duration-300`}
+            className={`fixed top-9 right-0 h-20 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between px-8 z-40 transition-all duration-300`}
             style={{ left: isCollapsed ? 60 : 220 }}
         >
             {/* Left: Digital Clock */}

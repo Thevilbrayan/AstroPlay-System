@@ -4,6 +4,7 @@ import { pb } from '../lib/pocketbase';
 import { useAuthStore } from '../store/auth.store';
 import { useWorkstationStore } from '../store/workstation.store';
 import { LogIn, Lock, Mail, Eye, EyeOff, Loader2, Sparkles, Rocket, Monitor } from 'lucide-react';
+import { TitleBar } from './layout/TitleBar';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
@@ -32,7 +33,8 @@ export const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 font-sans overflow-hidden">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 font-sans overflow-hidden pt-9">
+      <TitleBar />
 
       {/* Decorative Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

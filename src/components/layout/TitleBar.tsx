@@ -1,48 +1,27 @@
 import { useState, useEffect } from 'react';
-import { Minus, Square, X, Maximize2, Copy, Shrink } from 'lucide-react';
-import { useUIStore } from '../../store/ui.store';
+import { Minus, Square, X, Copy } from 'lucide-react';
 
-// Detecta si la app está corriendo dentro de Tauri (no en un browser normal)
 const isTauri = typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
 
 export function TitleBar() {
     const [isMaximized, setIsMaximized] = useState(false);
-    const { isFullscreen, setFullscreen } = useUIStore();
 
     useEffect(() => {
         if (!isTauri) return;
 
-        let unlistenResize: (() => void) | undefined;
+        let unlisten: (() => void) | undefined;
 
         const setup = async () => {
             const { getCurrentWindow } = await import('@tauri-apps/api/window');
             const appWindow = getCurrentWindow();
             setIsMaximized(await appWindow.isMaximized());
-            setFullscreen(await appWindow.isFullscreen());
-            unlistenResize = await appWindow.onResized(async () => {
+            unlisten = await appWindow.onResized(async () => {
                 setIsMaximized(await appWindow.isMaximized());
-                setFullscreen(await appWindow.isFullscreen());
             });
         };
         setup();
 
-        // F11 to toggle fullscreen
-        const handleKey = async (e: KeyboardEvent) => {
-            if (e.key === 'F11') {
-                e.preventDefault();
-                const { getCurrentWindow } = await import('@tauri-apps/api/window');
-                const w = getCurrentWindow();
-                const current = await w.isFullscreen();
-                await w.setFullscreen(!current);
-                setFullscreen(!current);
-            }
-        };
-        window.addEventListener('keydown', handleKey);
-
-        return () => {
-            unlistenResize?.();
-            window.removeEventListener('keydown', handleKey);
-        };
+        return () => { unlisten?.(); };
     }, []);
 
     const handleMinimize = async () => {
@@ -50,6 +29,7 @@ export function TitleBar() {
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
         getCurrentWindow().minimize();
     };
+
     const handleMaximize = async () => {
         if (!isTauri) return;
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
@@ -57,35 +37,14 @@ export function TitleBar() {
         if (isMaximized) { await w.unmaximize(); setIsMaximized(false); }
         else { await w.maximize(); setIsMaximized(true); }
     };
-    const handleFullscreen = async () => {
-        if (!isTauri) return;
-        const next = !isFullscreen;
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        await getCurrentWindow().setFullscreen(next);
-        setFullscreen(next);
-    };
+
     const handleClose = async () => {
         if (!isTauri) return;
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
         getCurrentWindow().close();
     };
 
-    // En el browser no mostramos la barra de título nativa
     if (!isTauri) return null;
-
-    // In fullscreen: show a floating exit button only
-    if (isFullscreen) {
-        return (
-            <button
-                onClick={handleFullscreen}
-                title="Salir de pantalla completa (F11)"
-                className="fixed top-2 right-2 z-[200] flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-slate-300/50 dark:border-slate-700/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 backdrop-blur-sm transition-all duration-200 opacity-30 hover:opacity-100 text-xs"
-            >
-                <Shrink className="w-3.5 h-3.5" />
-                <span>Salir (F11)</span>
-            </button>
-        );
-    }
 
     return (
         <div
@@ -105,18 +64,14 @@ export function TitleBar() {
             {/* Center drag region */}
             <div className="flex-1 h-full" data-tauri-drag-region />
 
-            {/* Right: Window controls */}
+            {/* Right: Window controls — Windows style */}
             <div className="flex items-center h-full shrink-0">
-                <button onClick={handleFullscreen} title="Pantalla completa (F11)"
-                    className="flex items-center justify-center w-10 h-full text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 transition-colors duration-150 cursor-default">
-                    <Maximize2 className="w-3.5 h-3.5" />
-                </button>
                 <button onClick={handleMinimize} title="Minimizar"
-                    className="flex items-center justify-center w-10 h-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/70 transition-colors duration-150 cursor-default">
+                    className="flex items-center justify-center w-11 h-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/70 transition-colors duration-150 cursor-default">
                     <Minus className="w-3.5 h-3.5" />
                 </button>
                 <button onClick={handleMaximize} title={isMaximized ? 'Restaurar' : 'Maximizar'}
-                    className="flex items-center justify-center w-10 h-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/70 transition-colors duration-150 cursor-default">
+                    className="flex items-center justify-center w-11 h-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/70 transition-colors duration-150 cursor-default">
                     {isMaximized ? <Copy className="w-3 h-3" /> : <Square className="w-3 h-3" />}
                 </button>
                 <button onClick={handleClose} title="Cerrar"

@@ -16,7 +16,6 @@ import {
 import { useAuthStore } from '../../store/auth.store';
 import { useWorkstationStore } from '../../store/workstation.store';
 import { cn } from '../../lib/utils';
-import { useUIStore } from '../../store/ui.store';
 
 interface NavItem {
     id: string;
@@ -95,8 +94,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView = 'dashboard', onNavigate
     const [isCollapsed, setIsCollapsed] = useState(true);
     const { user, logout } = useAuthStore();
     const { workstationType, workstationName } = useWorkstationStore();
-    const { isFullscreen } = useUIStore();
-
     const isAdmin = user?.role === 'admin';
 
     const isItemVisible = (item: NavItem): boolean => {
@@ -135,7 +132,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView = 'dashboard', onNavigate
                 `fixed left-0 flex flex-col z-50 transition-all duration-250 ease-in-out overflow-hidden`,
                 `bg-white dark:bg-slate-950`,
                 `border-r border-slate-200/80 dark:border-slate-800/60`,
-                isFullscreen ? 'top-0 h-screen' : 'top-9 h-[calc(100vh-36px)]',
+                'top-9 h-[calc(100vh-36px)]',
                 isCollapsed ? 'w-[60px]' : 'w-[220px]'
             )}
         >

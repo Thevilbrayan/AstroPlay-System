@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import { TitleBar } from './TitleBar';
-import { useUIStore } from '../../store/ui.store';
-
 interface MainLayoutProps {
     children: React.ReactNode;
     currentView?: string;
@@ -12,7 +10,6 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children, currentView, onNavigate }) => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
-    const { isFullscreen } = useUIStore();
 
     return (
         <div className="fixed inset-0 bg-slate-50 text-slate-900 dark:bg-slate-950 font-sans dark:text-slate-200 flex transition-colors duration-300">
@@ -33,7 +30,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentView, onNaviga
                 style={{ marginLeft: isSidebarCollapsed ? 60 : 220 }}
             >
                 {/* Spacer for title bar (36px) + header (80px) — does NOT eat into children's h-full */}
-                <div className={`shrink-0 ${isFullscreen ? 'h-20' : 'h-[116px]'}`} />
+                <div className="shrink-0 h-[116px]" />
 
                 {/* Header — fixed positioned on top */}
                 <Header isCollapsed={isSidebarCollapsed} />
