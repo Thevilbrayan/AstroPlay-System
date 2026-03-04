@@ -106,6 +106,17 @@ export const UsersView: React.FC = () => {
 
     const closeModal = () => { setShowModal(false); setFormError(null); setAvatarFile(null); setAvatarPreview(''); };
 
+    const adminCount = users.filter(u => u.role === 'admin').length;
+    // True when we cannot add more admins (unless editing an already-admin user)
+    const isAdminLimitReached = (targetRole: 'admin' | 'operator') => {
+        if (targetRole !== 'admin') return false;
+        if (formMode === 'edit') {
+            const editingUser = users.find(u => u.id === editingId);
+            if (editingUser?.role === 'admin') return false; // already admin, no change
+        }
+        return adminCount >= 2;
+    };
+
     const handleSave = async () => {
         setFormError(null);
         if (!form.name.trim()) { setFormError('El nombre es obligatorio.'); return; }
@@ -118,6 +129,10 @@ export const UsersView: React.FC = () => {
         if (formMode === 'edit' && form.password) {
             if (form.password.length < 8) { setFormError('La nueva contraseña debe tener al menos 8 caracteres.'); return; }
             if (form.password !== form.passwordConfirm) { setFormError('Las contraseñas no coinciden.'); return; }
+        }
+        if (isAdminLimitReached(form.role)) {
+            setFormError('Ya hay 2 administradores. El sistema permite un máximo de 2.');
+            return;
         }
 
         setIsSaving(true);
@@ -250,9 +265,9 @@ export const UsersView: React.FC = () => {
                                             <Pencil className="w-4 h-4" />
                                         </button>
                                         <button
-                                            onClick={() => handleDelete(u)}
-                                            disabled={deletingId === u.id}
-                                            className="p-2 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                            onClick={() => u.id !== currentUser?.id && handleDelete(u)}
+                                            disabled={deletingId === u.id || u.id === currentUser?.id}
+                                            className="p-2 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
                                             title={u.id === currentUser?.id ? 'No puedes eliminar tu propia cuenta' : 'Eliminar usuario'}
                                         >
                                             {deletingId === u.id
@@ -358,27 +373,47 @@ export const UsersView: React.FC = () => {
                             {/* Role */}
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Rol</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {(['operator', 'admin'] as const).map(role => (
-                                        <button
-                                            key={role}
-                                            type="button"
-                                            onClick={() => setForm(f => ({ ...f, role }))}
-                                            className={`py-2.5 px-4 rounded-xl border-2 text-sm font-bold transition-all ${
-                                                form.role === role
-                                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400'
-                                                    : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
-                                            }`}
-                                        >
-                                            {ROLE_LABELS[role]}
-                                        </button>
-                                    ))}
-                                </div>
-                                {form.role === 'admin' && (
-                                    <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                                        <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-                                        Los administradores tienen acceso total al sistema.
-                                    </p>
+                                {editingId === currentUser?.id ? (
+                                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                                        <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0" />
+                                        <span className="text-sm text-slate-500 dark:text-slate-400">No puedes cambiar tu propio rol.</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {(['operator', 'admin'] as const).map(role => {
+                                                const blocked = isAdminLimitReached(role);
+                                                return (
+                                                    <button
+                                                        key={role}
+                                                        type="button"
+                                                        onClick={() => !blocked && setForm(f => ({ ...f, role }))}
+                                                        disabled={blocked}
+                                                        title={blocked ? 'Límite de 2 administradores alcanzado' : undefined}
+                                                        className={`py-2.5 px-4 rounded-xl border-2 text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                                                            form.role === role
+                                                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                                                                : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                                                        }`}
+                                                    >
+                                                        {ROLE_LABELS[role]}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        {form.role === 'admin' && (
+                                            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                                                <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                                                Los administradores tienen acceso total al sistema.
+                                            </p>
+                                        )}
+                                        {isAdminLimitReached('admin') && form.role !== 'admin' && (
+                                            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                                <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                                                Límite de 2 administradores alcanzado.
+                                            </p>
+                                        )}
+                                    </>
                                 )}
                             </div>
 
